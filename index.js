@@ -637,10 +637,6 @@ function debugWorldInfo() {
     };
 }
 
-// 🔧 修复后的 getActiveWorldInfo 函数 - 更宽松的检查
-function getActiveWorldInfo() {
-    console.log('[ghost] 检查当前世界书状态...');
-    
     // 先调试一下
     const debugInfo = debugWorldInfo();
     

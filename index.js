@@ -229,10 +229,14 @@ function handleError(error) {
 }
 
 // 添加slash命令
-SlashCommandParser.addCommandObject(SlashCommand.fromProps({
-    name: 'gf_sum',
-    helpString: '对鬼面发起决斗邀请',
-    callback: async (args, limit) => {
-        await stealthSummarize(); 
-    }
-}));
+registerSlashCommand(
+    'gf_sum',
+    async () => {
+        await stealthSummarize();
+    },
+    [],
+    '对鬼面发起决斗邀请',
+    true,
+    true
+);
+

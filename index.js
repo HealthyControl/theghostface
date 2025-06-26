@@ -396,7 +396,21 @@ async function saveToWorldBook(summaryContent) {
         
         console.log('[ghost] 当前世界书名称:', world_info.name);
         console.log('[ghost] 当前条目数量:', world_info.entries?.length || 0);
+
+        if (!world_info) {
+            throw new Error('世界书未初始化，请先创建或加载一个世界书文件');
+        }
+
+        if (!Array.isArray(world_info.entries)) {
+            console.warn('[ghost] world_info.entries 不存在，正在初始化为空数组...');
+            world_info.entries = [];
+        }
         
+        const newEntry = createWorldInfoEntry(world_info, null);
+        if (!newEntry) {
+        console.error('[ghost] 条目创建失败：createWorldInfoEntry 返回 null');
+        continue;
+        }
         // 2. 解析总结内容
         console.log('[ghost] 开始解析总结内容...');
         const summaryLines = summaryContent.split('\n').filter(line => line.trim());

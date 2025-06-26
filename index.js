@@ -670,7 +670,6 @@ function debugWorldInfo() {
     
     console.log(`[ghost] ✅ 世界书准备就绪: "${world_info.name}", 条目数: ${world_info.entries.length}`);
     return world_info;
-}
 
 // 🚀 快速测试函数
 function testWorldInfo() {

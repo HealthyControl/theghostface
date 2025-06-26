@@ -54,23 +54,28 @@ const PROGRESS_BAR_ID = `${MODULE_NAME}_progress_bar`;
 
 //收集信息
 //需要同时支持两种模式：初始全量总结（用户首次触发时处理所有历史消息）,增量自动总结（后续每40条新消息触发）
-function collect_chat_messages(isInitial = false) {
-    const context = getContext();
+async function collect_chat_messages(isInitial = false) {
+    const context = await getContext(); // 确保拿到实际数据
+    const messages = Array.isArray(context) ? context : context.messages; // 兼容两种结构
 
-    // 初始总结：处理所有未被“鬼面总结”的历史消息
+    if (!Array.isArray(messages)) {
+        console.warn('getContext 返回内容不符合预期:', context);
+        return [];
+    }
+
     if (isInitial) {
-        return context.filter(msg =>
-            !msg.extra?.ghost_summarized && 
-            (msg.is_user || msg.is_system) // 只总结用户或角色说的话
+        return messages.filter(msg =>
+            !msg.extra?.ghost_summarized &&
+            (msg.is_user || msg.is_system)
         );
     }
 
-    // 增量总结：只处理最近40条未总结的消息
-    return context.slice(-40).filter(msg =>
+    return messages.slice(-40).filter(msg =>
         !msg.extra?.ghost_summarized &&
         (msg.is_user || msg.is_system)
     );
 }
+
 
 
 //模型总结生成

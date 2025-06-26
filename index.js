@@ -406,11 +406,21 @@ async function saveToWorldBook(summaryContent) {
             world_info.entries = [];
         }
         
+        for (const [category, items] of Object.entries(categorizedData)) {
+    try {
         const newEntry = createWorldInfoEntry(world_info, null);
         if (!newEntry) {
-        console.error('[ghost] 条目创建失败：createWorldInfoEntry 返回 null');
-        continue;
+            console.error('[ghost] 条目创建失败：createWorldInfoEntry 返回 null');
+            continue;
         }
+
+        // 设置 entry 属性...
+    } catch (e) {
+        console.error(`[ghost] 条目 ${category} 创建失败`, e);
+        continue; // ✅ 合法，仍在 for 内
+    }
+}
+
         // 2. 解析总结内容
         console.log('[ghost] 开始解析总结内容...');
         const summaryLines = summaryContent.split('\n').filter(line => line.trim());

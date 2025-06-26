@@ -104,34 +104,44 @@ async function getGhostContextMessages(isInitial = false) {
 
 // ✨ 模型总结生成（修复版）
 async function generateSummary(messages) {
+    console.log('[ghost] === 开始 generateSummary ===');
+    
     if (!messages || messages.length === 0) {
         console.warn('[ghost] generateSummary: 没有可用消息');
         return '';
     }
 
-    const contextText = messages
-        .map(msg => {
-            const speaker = msg.is_user ? '{{user}}' : '{{char}}';
-            // 处理不同的消息内容格式
-            let content = '';
-            if (typeof msg.mes === 'string') {
-                content = msg.mes;
-            } else if (typeof msg.text === 'string') {
-                content = msg.text;
-            } else if (typeof msg.content === 'string') {
-                content = msg.content;
-            } else if (msg.mes && typeof msg.mes === 'object') {
-                content = JSON.stringify(msg.mes);
-            } else if (msg.text && typeof msg.text === 'object') {
-                content = JSON.stringify(msg.text);
-            } else {
-                content = '[无内容]';
-            }
-            return `${speaker}: ${content}`;
-        })
-        .join('\n');
+    console.log(`[ghost] 步骤1: 准备处理 ${messages.length} 条消息`);
 
-    const optimized_prompt = `你是一个专业且充满热心的故事总结助手，请从最近40条对话中提取可复用剧情细节：
+    try {
+        // 步骤1: 构建上下文文本
+        console.log('[ghost] 步骤2: 开始构建上下文文本...');
+        const contextText = messages
+            .map((msg, index) => {
+                const speaker = msg.is_user ? '{{user}}' : 
+                               msg.is_system ? 'System' : 
+                               (msg.name || '{{char}}');
+                
+                let content = '';
+                if (typeof msg.mes === 'string') {
+                    content = msg.mes;
+                } else if (typeof msg.text === 'string') {
+                    content = msg.text;
+                } else if (typeof msg.content === 'string') {
+                    content = msg.content;
+                } else {
+                    content = '[无内容]';
+                }
+                
+                console.log(`[ghost] 消息${index + 1}: ${speaker} (${content.length}字)`);
+                return `${speaker}: ${content}`;
+            })
+            .join('\n');
+
+        console.log(`[ghost] 步骤3: 上下文构建完成，总长度: ${contextText.length} 字符`);
+
+        // 步骤2: 构建提示词
+        const optimized_prompt = `你是一个专业且充满热心的故事总结助手，请从最近的对话中提取可复用剧情细节：
 1. 筛选标准（必须满足）：
    - 明确喜好/恐惧（比如"喜欢/讨厌/害怕"等关键词）
    - 具体梦境/回忆（比如"梦见/想起"等）
@@ -150,27 +160,90 @@ ${contextText}
 [恐惧] 用户害怕檀香气味
 [事件] 角色玩游戏很菜被用户嘲笑了`;
 
-    console.log('[ghost] 开始生成总结...');
-    console.log('[ghost] 提示词长度:', optimized_prompt.length);
-    
-    try {
-        const context = await getContext();
-        const result = await context.generateQuietPrompt(
-            optimized_prompt,
-            true,      // quiet 模式（不显示在聊天窗口）
-            false,     // 不注入世界书
-            "你是一个专业的故事总结助手" // 系统提示（可选）
-        );
+        console.log(`[ghost] 步骤4: 提示词构建完成，长度: ${optimized_prompt.length} 字符`);
         
-        return parseModelOutput(result);
-    } catch (error) {
-        console.error("生成失败详情:", {
-            error: error.stack,
-            prompt: optimized_prompt
+        // 检查提示词长度
+        if (optimized_prompt.length > 8000) {
+            console.warn(`[ghost] ⚠️ 提示词过长 (${optimized_prompt.length}字符)，可能导致API调用失败`);
+        }
+
+        // 步骤3: 获取上下文对象
+        console.log('[ghost] 步骤5: 获取Context对象...');
+        const context = await getContext();
+        
+        if (!context) {
+            throw new Error('getContext() 返回 null/undefined');
+        }
+        
+        console.log('[ghost] 步骤6: Context对象获取成功，类型:', typeof context);
+        console.log('[ghost] 步骤7: Context对象属性:', Object.keys(context));
+        
+        if (typeof context.generateQuietPrompt !== 'function') {
+            throw new Error('context.generateQuietPrompt 不是函数');
+        }
+
+        // 步骤4: 调用AI生成
+        console.log('[ghost] 步骤8: 开始调用 generateQuietPrompt...');
+        console.log('[ghost] 调用参数:', {
+            promptLength: optimized_prompt.length,
+            quiet: true,
+            skipWI: false,
+            systemPrompt: "你是一个专业的故事总结助手"
         });
-        throw new Error("ST 生成失败: " + error.message);
+
+        // 设置超时
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('AI生成超时 (30秒)')), 30000);
+        });
+
+        const generatePromise = context.generateQuietPrompt(
+            optimized_prompt,
+            true,      // quiet 模式
+            false,     // 不跳过世界书注入
+            "你是一个专业的故事总结助手"
+        );
+
+        console.log('[ghost] 步骤9: 等待AI响应...');
+        const result = await Promise.race([generatePromise, timeoutPromise]);
+        
+        console.log('[ghost] 步骤10: AI生成完成！');
+        console.log('[ghost] 原始结果类型:', typeof result);
+        console.log('[ghost] 原始结果长度:', result ? result.length : 'null');
+        console.log('[ghost] 原始结果预览:', result ? result.slice(0, 200) + '...' : 'null');
+        
+        if (!result) {
+            throw new Error('AI返回空结果');
+        }
+
+        // 步骤5: 解析结果
+        console.log('[ghost] 步骤11: 开始解析模型输出...');
+        const parsedResult = parseModelOutput(result);
+        console.log('[ghost] 步骤12: 解析完成，最终结果长度:', parsedResult.length);
+        console.log('[ghost] === generateSummary 成功完成 ===');
+        
+        return parsedResult;
+
+    } catch (error) {
+        console.error('[ghost] === generateSummary 发生错误 ===');
+        console.error('[ghost] 错误类型:', error.constructor.name);
+        console.error('[ghost] 错误消息:', error.message);
+        console.error('[ghost] 错误堆栈:', error.stack);
+        
+        // 详细错误分析
+        if (error.message.includes('timeout') || error.message.includes('超时')) {
+            console.error('[ghost] 🔥 AI生成超时，可能是提示词太长或网络问题');
+        } else if (error.message.includes('generateQuietPrompt')) {
+            console.error('[ghost] 🔥 generateQuietPrompt 调用失败，检查ST版本兼容性');
+        } else if (error.message.includes('Context')) {
+            console.error('[ghost] 🔥 上下文获取失败，检查getContext()函数');
+        } else {
+            console.error('[ghost] 🔥 未知错误，需要进一步调试');
+        }
+        
+        throw error;
     }
 }
+
 
 // ✨ 给处理过的消息打标签（修复版）
 function markMessagesSummarized(messages) {
@@ -189,20 +262,47 @@ function markMessagesSummarized(messages) {
 
 // 定义一下模型输出，工具函数
 function parseModelOutput(rawOutput) {
+    console.log('[ghost] 开始解析模型输出...');
+    console.log('[ghost] 原始输出类型:', typeof rawOutput);
+    console.log('[ghost] 原始输出长度:', rawOutput ? rawOutput.length : 'null');
+    
     try {
+        if (!rawOutput || typeof rawOutput !== 'string') {
+            console.warn('[ghost] 输出不是字符串，尝试转换...');
+            rawOutput = String(rawOutput || '');
+        }
+        
         const lines = rawOutput.split('\n')
             .map(line => line.trim())
-            .filter(line => line && line.match(/^\[.+?\]/)); // 只要符合格式的行
+            .filter(line => {
+                const isValid = line && line.match(/^\[.+?\]/);
+                if (line && !isValid) {
+                    console.log('[ghost] 跳过无效行:', line.slice(0, 50));
+                }
+                return isValid;
+            });
             
-        return lines.join('\n');
+        console.log(`[ghost] 解析完成: 找到 ${lines.length} 个有效条目`);
+        lines.forEach((line, i) => {
+            console.log(`[ghost] 条目${i + 1}:`, line.slice(0, 80));
+        });
+        
+        const result = lines.join('\n');
+        console.log(`[ghost] 最终解析结果长度: ${result.length}`);
+        
+        return result;
     } catch (error) {
-        console.warn('解析模型输出失败，返回原始内容');
-        return rawOutput;
+        console.error('[ghost] 解析模型输出时出错:', error);
+        console.warn('[ghost] 返回原始内容');
+        return rawOutput || '';
     }
 }
 
 // 偷偷蹲起来尾随（修复版）
 async function stealthSummarize(isInitial = false) {
+    console.log('[ghost] === 开始 stealthSummarize 流程 ===');
+    console.log('[ghost] 参数: isInitial =', isInitial);
+    
     const notification = toastr.info("👻 鬼面尾随中...", null, {
         timeOut: 0,
         closeButton: false,
@@ -212,37 +312,67 @@ async function stealthSummarize(isInitial = false) {
     });
 
     try {
-        // 1. 收集信息
-        const messages = await getGhostContextMessages();
+        // 第1步: 收集消息
+        console.log('[ghost] 第1步: 开始收集消息...');
+        const messages = await getGhostContextMessages(isInitial);
+        
         if (!messages || messages.length === 0) {
+            console.warn('[ghost] ⚠️ 没有找到可总结的消息');
             toastr.warning("没有找到可总结的消息，鬼面悄悄退场了...");
-            toastr.remove(notification);
             return;
         }
 
-        // 2. 模型生成总结
+        console.log(`[ghost] 第1步完成: 收集到 ${messages.length} 条消息`);
+
+        // 第2步: 生成总结
+        console.log('[ghost] 第2步: 开始生成总结...');
         const summaryContent = await generateSummary(messages);
+        
         if (!summaryContent?.trim()) {
+            console.warn('[ghost] ⚠️ AI生成的总结为空');
             toastr.warning("总结失败或为空，鬼面望天叹气...");
-            toastr.remove(notification);
             return;
         }
 
-        // 3. 存入世界书
+        console.log(`[ghost] 第2步完成: 总结长度 ${summaryContent.length} 字符`);
+        console.log('[ghost] 总结内容预览:', summaryContent.slice(0, 100) + '...');
+
+        // 第3步: 保存到世界书
+        console.log('[ghost] 第3步: 开始保存到世界书...');
         await saveToWorldBook(summaryContent);
+        console.log('[ghost] 第3步完成: 已保存到世界书');
 
-        // 4. 标记已处理消息
+        // 第4步: 标记消息
+        console.log('[ghost] 第4步: 标记消息为已处理...');
         markMessagesSummarized(messages);
+        console.log('[ghost] 第4步完成: 已标记消息');
 
-        // 5. 移除提示
-        toastr.remove(notification);
+        // 成功完成
         toastr.success("👻 鬼面尾随成功！信息已记录");
-        console.log('[ghost] 总结完成，已写入世界书');
+        console.log('[ghost] === stealthSummarize 流程成功完成 ===');
 
     } catch (err) {
-        toastr.remove(notification);
+        console.error('[ghost] === stealthSummarize 流程失败 ===');
+        console.error('[ghost] 错误详情:', {
+            name: err.name,
+            message: err.message,
+            stack: err.stack
+        });
+        
         toastr.error("尾随被看破: " + err.message);
-        console.error('[ghost] stealthSummarize error:', err);
+        
+        // 根据错误类型给出具体提示
+        if (err.message.includes('超时')) {
+            console.error('[ghost] 💡 建议: 减少消息数量或优化提示词长度');
+        } else if (err.message.includes('generateQuietPrompt')) {
+            console.error('[ghost] 💡 建议: 检查SillyTavern版本是否支持该API');
+        } else if (err.message.includes('世界书')) {
+            console.error('[ghost] 💡 建议: 检查世界书是否正确加载');
+        }
+        
+    } finally {
+        toastr.remove(notification);
+        console.log('[ghost] === stealthSummarize 流程结束 ===');
     }
 }
 
@@ -318,6 +448,18 @@ function handleError(error) {
         console.error('[ghost] 自动总结失败:', error);
     }
 }
+// 错误捕获机制
+// 在浏览器控制台运行这个，捕获下一个错误
+window.addEventListener('error', function(e) {
+    console.log('🔥 捕获到错误:', e.error);
+    console.log('🔥 错误堆栈:', e.error.stack);
+    console.log('🔥 错误位置:', e.filename, e.lineno, e.colno);
+});
+
+// 也可以捕获 Promise 错误
+window.addEventListener('unhandledrejection', function(e) {
+    console.log('🔥 捕获到 Promise 错误:', e.reason);
+});
 
 // 添加slash命令
 registerSlashCommand(

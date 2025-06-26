@@ -52,16 +52,18 @@ const MODULE_NAME = 'the_ghost_face'; // 必须全小写或者下划线
 const MODULE_NAME_FANCY = '鬼面'; //支持多语言显示
 const PROGRESS_BAR_ID = `${MODULE_NAME}_progress_bar`;
 
-//收集信息
-//需要同时支持两种模式：初始全量总结（用户首次触发时处理所有历史消息）,增量自动总结（后续每40条新消息触发）
-async function collect_chat_messages(isInitial = false) {
-    const context = await getContext(); // 确保拿到实际数据
-    const messages = Array.isArray(context) ? context : context.messages; // 兼容两种结构
+// ✨ 工具函数：统一获取消息数组
+function getMessageArray(source) {
+    if (Array.isArray(source)) return source;
+    if (Array.isArray(source?.messages)) return source.messages;
+    console.warn('[ghost] 未识别的上下文结构:', source);
+    return [];
+}
 
-    if (!Array.isArray(messages)) {
-        console.warn('getContext 返回内容不符合预期:', context);
-        return [];
-    }
+// ✨ 收集消息（全量或增量）
+async function collect_chat_messages(isInitial = false) {
+    const context = await getContext(); 
+    const messages = getMessageArray(context);
 
     if (isInitial) {
         return messages.filter(msg =>
@@ -76,37 +78,42 @@ async function collect_chat_messages(isInitial = false) {
     );
 }
 
-
-
-//模型总结生成
+// ✨ 模型总结生成
 async function generateSummary(context) {
-    // 给模型看的prompt
+    const messages = getMessageArray(context);
+
+    if (messages.length === 0) {
+        console.warn('[ghost] generateSummary: 没有可用消息');
+        return '';
+    }
+
     const optimized_prompt = `
-    请从最近40条对话中提取**可复用剧情细节**：
-    1. 筛选标准（必须满足）：
-       - 明确喜好/恐惧（比如"喜欢/讨厌/害怕"等关键词）
-       - 具体梦境/回忆（比如"梦见/想起"等）
-       - 重要人际关系（出现人名或关系称谓）
-       - {{char}}与{{user}}的独特互动
-    2. 输出要求：
-       - 每行一个细节，格式：[类型] 内容
-       - 保留原始关键词（如"黑猫"、"檀香"）
-       - 只需要记录，不要解释或补充
+请从最近40条对话中提取**可复用剧情细节**：
+1. 筛选标准（必须满足）：
+   - 明确喜好/恐惧（比如"喜欢/讨厌/害怕"等关键词）
+   - 具体梦境/回忆（比如"梦见/想起"等）
+   - 重要人际关系（出现人名或关系称谓）
+   - {{char}}与{{user}}的独特互动
+2. 输出要求：
+   - 每行一个细节，格式：[类型] 内容
+   - 保留原始关键词（如"黑猫"、"檀香"）
+   - 只需要记录，不要解释或补充
 
-    对话记录：
-    """
-    {{context}}
-    """
-    示例输出：
-    [喜好] {{user}}喜欢雨天红茶
-    [恐惧] {{user}}害怕檀香气味
-    [事件] {{char}}玩黎明杀机很菜被{{user}}嘲笑了
-    `.trim();// trim避免产生空白换行，如果不行的话就去掉，只保留`
+对话记录：
+"""
+{{context}}
+"""
+示例输出：
+[喜好] {{user}}喜欢雨天红茶
+[恐惧] {{user}}害怕檀香气味
+[事件] {{char}}玩黎明杀机很菜被{{user}}嘲笑了
+`.trim();
 
-    const filled_prompt = optimized_prompt.replace('{{context}}', context.map(msg => msg.text).join('\n'));
+    const filled_prompt = optimized_prompt.replace('{{context}}',
+        messages.map(msg => msg.text).join('\n')
+    );
 
-    //调用API生成
-     const result = await generateRaw({
+    const result = await generateRaw({
         prompt: filled_prompt,
         temperature: 0.2,
         max_context_length: 2000
@@ -115,10 +122,10 @@ async function generateSummary(context) {
     return parseModelOutput(result);
 }
 
-// 给处理过的消息打标签
+// ✨ 给处理过的消息打标签
 function markMessagesSummarized(context) {
-    if (!Array.isArray(context)) return;
-    context.forEach(msg => {
+    const messages = getMessageArray(context);
+    messages.forEach(msg => {
         msg.extra = msg.extra || {};
         msg.extra.ghost_summarized = true;
     });
@@ -137,6 +144,7 @@ function parseModelOutput(rawOutput) {
         return rawOutput;
     }
 }
+
 // 偷偷蹲起来尾随
 async function stealthSummarize(isInitial = false) {
     const notification = toastr.info("👻 鬼面尾随中...", null, {
@@ -149,21 +157,38 @@ async function stealthSummarize(isInitial = false) {
 
     try {
         // 1. 收集信息
-        const context = collect_chat_messages(isInitial);
+        const context = await collect_chat_messages(isInitial);
+        if (!context || context.length === 0) {
+            toastr.warning("没有找到可总结的消息，鬼面悄悄退场了...");
+            toastr.remove(notification);
+            return;
+        }
 
         // 2. 模型生成总结
         const summaryContent = await generateSummary(context);
+        if (!summaryContent?.trim()) {
+            toastr.warning("总结失败或为空，鬼面望天叹气...");
+            toastr.remove(notification);
+            return;
+        }
 
         // 3. 存入世界书
         await saveToWorldBook(summaryContent);
 
-        toastr.remove(notification); // 成功后移除提示
+        // 4. 标记已处理消息
+        markMessagesSummarized(context);
+
+        // 5. 移除提示
+        toastr.remove(notification);
+        console.log('[ghost] 总结完成，已写入世界书');
 
     } catch (err) {
+        toastr.remove(notification);
         toastr.error("尾随被看破: " + err.message);
-        console.error(err);
-}
+        console.error('[ghost] stealthSummarize error:', err);
     }
+}
+
 
 
 //把模型生成的总结信息保存到世界书
@@ -235,7 +260,8 @@ function handleError(error) {
 }
 
 // 添加slash命令
-registerSlashCommand('gf_sum',
+registerSlashCommand(
+    'gf_sum',
     async () => {
         await stealthSummarize();
     },
@@ -244,4 +270,3 @@ registerSlashCommand('gf_sum',
     true,
     true
 );
-

@@ -392,7 +392,7 @@ function getActiveWorldInfo() {
 }
     */
 
-
+/*
 // 直接使用全局 world_info
 function getActiveWorldInfo() {
     console.log('[ghost] 检查当前世界书状态...');
@@ -421,7 +421,7 @@ function getActiveWorldInfo() {
     console.log(`[ghost] 当前世界书: "${world_info.name}", 条目数: ${world_info.entries.length}`);
     return world_info;
  }
-
+*/
 
 // ✅ 进一步简化的 saveToWorldBook 函数
 async function saveToWorldBook(summaryContent) {

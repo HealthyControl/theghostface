@@ -34,7 +34,6 @@ import {
     saveWorldInfo, 
     world_info 
 } from '../../../world-info.js';
-import { APP, BASE, DERIVED, EDITOR, SYSTEM, USER } from './core/manager.js';
 import { getPresetManager } from '../../../preset-manager.js'// 预设管理，可以联动使用
 import { formatInstructModeChat } from '../../../instruct-mode.js';// 把聊天信息转换成LLM语言
 import { loadMovingUIState, renderStoryString, power_user } from '../../../power-user.js';// 高级用户深度定制化

@@ -114,28 +114,6 @@ async function generateSummary(messages) {
         return '';
     }
 
-    const optimized_prompt = `
-请从最近40条对话中提取**可复用剧情细节**：
-1. 筛选标准（必须满足）：
-   - 明确喜好/恐惧（比如"喜欢/讨厌/害怕"等关键词）
-   - 具体梦境/回忆（比如"梦见/想起"等）
-   - 重要人际关系（出现人名或关系称谓）
-   - {{char}}与{{user}}的独特互动
-2. 输出要求：
-   - 每行一个细节，格式：[类型] 内容
-   - 保留原始关键词（如"黑猫"、"檀香"）
-   - 只需要记录，不要解释或补充
-
-对话记录：
-"""
-{{context}}
-"""
-示例输出：
-[喜好] {{user}}喜欢雨天红茶
-[恐惧] {{user}}害怕檀香气味
-[事件] {{char}}玩黎明杀机很菜被{{user}}嘲笑了
-`.trim();
-
     const contextText = messages
         .map(msg => {
             const speaker = msg.is_user ? '{{user}}' : '{{char}}';
@@ -158,17 +136,58 @@ async function generateSummary(messages) {
         })
         .join('\n');
 
-    const filled_prompt = optimized_prompt.replace('{{context}}', contextText);
+    const optimized_prompt = `请从最近40条对话中提取可复用剧情细节：
+1. 筛选标准（必须满足）：
+   - 明确喜好/恐惧（比如"喜欢/讨厌/害怕"等关键词）
+   - 具体梦境/回忆（比如"梦见/想起"等）
+   - 重要人际关系（出现人名或关系称谓）
+   - 角色与用户的独特互动
+2. 输出要求：
+   - 每行一个细节，格式：[类型] 内容
+   - 保留原始关键词
+   - 只需要记录，不要解释或补充
+
+对话记录：
+${contextText}
+
+示例输出：
+[喜好] 用户喜欢雨天红茶
+[恐惧] 用户害怕檀香气味
+[事件] 角色玩游戏很菜被用户嘲笑了`;
 
     console.log('[ghost] 开始生成总结...');
+    console.log('[ghost] 提示词长度:', optimized_prompt.length);
     
-    const result = await generateRaw({
-        prompt: filled_prompt,
-        temperature: 0.2,
-        max_context_length: 2000
-    });
+    try {
+        // 修复：使用正确的 generateRaw 参数格式
+        const result = await generateRaw({
+            prompt: optimized_prompt,
+            use_mancer: false,
+            api_server: '',
+            legacy_api: false,
+            sampler_order: [],
+            temperature: 0.2,
+            top_p: 1,
+            top_k: 0,
+            max_context_length: 2000,
+            max_length: 500,
+            rep_pen: 1,
+            rep_pen_range: 0,
+            rep_pen_slope: 0,
+            no_repeat_ngram_size: 0,
+            memory: '',
+            authors_note: '',
+            authors_note_position: 2,
+            quiet: true
+        });
 
-    return parseModelOutput(result);
+        console.log('[ghost] 生成结果:', result);
+        return parseModelOutput(result);
+        
+    } catch (error) {
+        console.error('[ghost] generateRaw 调用失败:', error);
+        throw new Error(`生成总结失败: ${error.message}`);
+    }
 }
 
 // ✨ 给处理过的消息打标签（修复版）

@@ -377,7 +377,7 @@ async function stealthSummarize(isInitial = false) {
 }
 
 //把模型生成的总结信息保存到世界书
-
+/*这段好像不太对
 // 替代world_info的函数
 function getActiveWorldInfo() {
     const globalSelect = world_info?.globalSelect?.[0]; 
@@ -390,10 +390,10 @@ function getActiveWorldInfo() {
     
     return trueWorldInfo;
 }
+    */
 
-// ✨ 修复的世界书保存函数
-// ✨ 修复的世界书保存函数
-// ✅ 修复后的函数 - 直接使用全局 world_info
+
+// 直接使用全局 world_info
 function getActiveWorldInfo() {
     console.log('[ghost] 检查当前世界书状态...');
     console.log('[ghost] world_info 对象:', world_info);

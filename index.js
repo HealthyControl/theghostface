@@ -1,5 +1,5 @@
 // TheGhostFace
-// 062625
+// 062625再修不好我就去死好吧
 // 机器人
 
 import {
@@ -90,7 +90,7 @@ async function getGhostContextMessages(isInitial = false) {
         // 跳过已总结的消息
         if (msg.extra?.ghost_summarized) return false;
         
-        // ✨ 关键修复：包含角色消息
+        // 关键修复：包含角色消息，我真的不中了，修不动了
         const isValidMessage = msg.is_user ||           // 用户消息
                               msg.is_system ||         // 系统消息  
                               (!msg.is_user && !msg.is_system && msg.mes); // 角色消息
@@ -102,7 +102,7 @@ async function getGhostContextMessages(isInitial = false) {
     return filtered;
 }
 
-// ✨ 模型总结生成（修复版）
+// 模型总结生成
 async function generateSummary(messages) {
     console.log('[ghost] === 开始 generateSummary ===');
     
@@ -141,7 +141,7 @@ async function generateSummary(messages) {
         console.log(`[ghost] 步骤3: 上下文构建完成，总长度: ${contextText.length} 字符`);
 
         // 步骤2: 构建提示词
-        const optimized_prompt = `你是一个专业且充满热心的故事总结助手，请从最近的对话中提取可复用剧情细节：
+        const optimized_prompt = `你是一个专业且充满热心的故事总结助手，请从最近的对话中提取可复用剧情细节，确保未来角色可以随时给用户甜蜜小惊喜：
 1. 筛选标准（必须满足）：
    - 明确喜好/恐惧（比如"喜欢/讨厌/害怕"等关键词）
    - 具体梦境/回忆（比如"梦见/想起"等）
@@ -245,7 +245,7 @@ ${contextText}
 }
 
 
-// ✨ 给处理过的消息打标签（修复版）
+// 给处理过的消息打标签，目前不知道咋测试这个函数生不生效
 function markMessagesSummarized(messages) {
     if (!Array.isArray(messages)) {
         console.warn('[ghost] markMessagesSummarized: 输入不是数组');
@@ -298,7 +298,7 @@ function parseModelOutput(rawOutput) {
     }
 }
 
-// 偷偷蹲起来尾随（修复版）
+// 偷偷蹲起来尾随
 async function stealthSummarize(isInitial = false) {
     console.log('[ghost] === 开始 stealthSummarize 流程 ===');
     console.log('[ghost] 参数: isInitial =', isInitial);
@@ -318,7 +318,7 @@ async function stealthSummarize(isInitial = false) {
         
         if (!messages || messages.length === 0) {
             console.warn('[ghost] ⚠️ 没有找到可总结的消息');
-            toastr.warning("没有找到可总结的消息，鬼面悄悄退场了...");
+            toastr.warning("没有找到可总结的消息，鬼面愤怒拔线了...");
             return;
         }
 
@@ -330,7 +330,7 @@ async function stealthSummarize(isInitial = false) {
         
         if (!summaryContent?.trim()) {
             console.warn('[ghost] ⚠️ AI生成的总结为空');
-            toastr.warning("总结失败或为空，鬼面望天叹气...");
+            toastr.warning("总结失败或为空，鬼面被板子砸到叹气...");
             return;
         }
 
@@ -348,7 +348,7 @@ async function stealthSummarize(isInitial = false) {
         console.log('[ghost] 第4步完成: 已标记消息');
 
         // 成功完成
-        toastr.success("👻 鬼面尾随成功！信息已记录");
+        toastr.success("👻 鬼面把你吸红了！信息已记录");
         console.log('[ghost] === stealthSummarize 流程成功完成 ===');
 
     } catch (err) {
@@ -377,7 +377,7 @@ async function stealthSummarize(isInitial = false) {
 }
 
 //把模型生成的总结信息保存到世界书
-// 🤬再修，这狗阉的世界书
+// 🤬再修，这狗阉的世界书我阉割你的爹
 async function saveToWorldBook(summaryContent) {
     console.log('[ghost] === 开始保存到世界书 ===');
     console.log('[ghost] 总结内容长度:', summaryContent.length);
@@ -435,7 +435,7 @@ async function saveToWorldBook(summaryContent) {
             console.log(`[ghost] 创建类别"${category}"的条目，包含${items.length}个项目`);
             
             try {
-                // ✅ 正确的调用方式：第一个参数是 uid（null表示自动生成），第二个参数是世界书数据
+                // 第一个参数是 uid（null表示自动生成），第二个参数是世界书数据
                 const newEntry = createWorldInfoEntry(null, worldBookData);
                 
                 if (!newEntry) {
@@ -447,26 +447,25 @@ async function saveToWorldBook(summaryContent) {
                 
                 // 设置条目属性
                 const entryContent = items.join('\n');
-                const entryComment = `鬼面自动总结 - ${category}`;
+                const entryComment = `我们的故事 - ${category}`;
                 
                 console.log('[ghost] 设置条目属性...');
                 Object.assign(newEntry, {
                     comment: entryComment,
                     content: entryContent,
-                    key: [category, '鬼面', '总结'], // 关键词数组
-                    keysecondary: [], // 次要关键词
-                    constant: false, // 不是常驻条目
-                    selective: true, // 启用选择性激活
-                    selectiveLogic: 0, // 逻辑模式
-                    addMemo: true, // 添加到记忆
-                    order: 100, // 顺序
-                    position: 0, // 位置（0=在用户消息之前）
-                    disable: false, // 不禁用
+                    key: [],
+                    constant: true, // 常驻条目
+                    selective: false, 
+                    selectiveLogic: false, 
+                    addMemo: false, 
+                    order: 100, 
+                    position: 0, 
+                    disable: false, 
                     excludeRecursion: false,
                     preventRecursion: false,
                     delayUntilRecursion: false,
-                    probability: 100, // 触发概率
-                    useProbability: false // 不使用概率
+                    probability: 100, 
+                    useProbability: false 
                 });
                 
                 console.log(`[ghost] 条目"${entryComment}"配置完成`);
@@ -538,7 +537,7 @@ function checkWorldBookAvailable() {
     return true;
 }
 
-// 🔧 修复后的 getActiveWorldInfo 函数 - 更宽松的检查
+// 函数定义getActiveWorldInfo
 function getActiveWorldInfo() {
     console.log('[ghost] 检查当前世界书状态...');
     

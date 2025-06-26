@@ -41,6 +41,7 @@ import { dragElement } from '../../../RossAscends-mods.js';// 拖拽UI
 import { debounce_timeout } from '../../../constants.js';// 防抖控制（如用户频繁触发时）
 import { MacrosParser } from '../../../macros.js';// 宏指令解析器，条件判断、变量替换、函数调用etc
 import { commonEnumProviders } from '../../../slash-commands/SlashCommandCommonEnumsProvider.js';// 注册斜杠命令用
+import { executeSlashCommands, registerSlashCommand } from '../../../slash-commands.js';
 import { getRegexScripts } from '../../../../scripts/extensions/regex/index.js'// 正则相关
 import { runRegexScript } from '../../../../scripts/extensions/regex/engine.js'
 
@@ -229,8 +230,7 @@ function handleError(error) {
 }
 
 // 添加slash命令
-registerSlashCommand(
-    'gf_sum',
+registerSlashCommand('gf_sum',
     async () => {
         await stealthSummarize();
     },

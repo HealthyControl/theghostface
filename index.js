@@ -52,10 +52,15 @@ const MODULE_NAME = 'the_ghost_face'; // 必须全小写或者下划线
 const MODULE_NAME_FANCY = '鬼面'; //支持多语言显示
 const PROGRESS_BAR_ID = `${MODULE_NAME}_progress_bar`;
 
-// ✨ 工具函数：统一获取消息数组
+// ✨ 工具函数：统一获取消息数组（修复版）
 function getMessageArray(source) {
-    if (Array.isArray(source)) return source;
+    // 优先检查 SillyTavern 标准结构
+    if (Array.isArray(source?.chat)) return source.chat;
+    
+    // 备用检查
     if (Array.isArray(source?.messages)) return source.messages;
+    if (Array.isArray(source)) return source;
+    
     console.warn('[ghost] 未识别的上下文结构:', source);
     return [];
 }
@@ -65,24 +70,33 @@ async function collect_chat_messages(isInitial = false) {
     const context = await getContext(); 
     const messages = getMessageArray(context);
 
+    console.log(`[ghost] 获取到 ${messages.length} 条消息`);
+    
+    if (messages.length === 0) {
+        console.warn('[ghost] collect_chat_messages: 没有找到任何消息');
+        return [];
+    }
+
     if (isInitial) {
-        return messages.filter(msg =>
+        const filtered = messages.filter(msg =>
             !msg.extra?.ghost_summarized &&
             (msg.is_user || msg.is_system)
         );
+        console.log(`[ghost] 初始筛选: ${filtered.length} 条消息`);
+        return filtered;
     }
 
-    return messages.slice(-40).filter(msg =>
+    const filtered = messages.slice(-40).filter(msg =>
         !msg.extra?.ghost_summarized &&
         (msg.is_user || msg.is_system)
     );
+    console.log(`[ghost] 增量筛选: ${filtered.length} 条消息`);
+    return filtered;
 }
 
-// ✨ 模型总结生成
-async function generateSummary(context) {
-    const messages = getMessageArray(context);
-
-    if (messages.length === 0) {
+// ✨ 模型总结生成（修复版）
+async function generateSummary(messages) {
+    if (!messages || messages.length === 0) {
         console.warn('[ghost] generateSummary: 没有可用消息');
         return '';
     }
@@ -109,10 +123,17 @@ async function generateSummary(context) {
 [事件] {{char}}玩黎明杀机很菜被{{user}}嘲笑了
 `.trim();
 
-    const filled_prompt = optimized_prompt.replace('{{context}}',
-        messages.map(msg => msg.text).join('\n')
-    );
+    const contextText = messages
+        .map(msg => {
+            const speaker = msg.is_user ? '{{user}}' : '{{char}}';
+            return `${speaker}: ${msg.mes || msg.text || ''}`;
+        })
+        .join('\n');
 
+    const filled_prompt = optimized_prompt.replace('{{context}}', contextText);
+
+    console.log('[ghost] 开始生成总结...');
+    
     const result = await generateRaw({
         prompt: filled_prompt,
         temperature: 0.2,
@@ -122,13 +143,19 @@ async function generateSummary(context) {
     return parseModelOutput(result);
 }
 
-// ✨ 给处理过的消息打标签
-function markMessagesSummarized(context) {
-    const messages = getMessageArray(context);
+// ✨ 给处理过的消息打标签（修复版）
+function markMessagesSummarized(messages) {
+    if (!Array.isArray(messages)) {
+        console.warn('[ghost] markMessagesSummarized: 输入不是数组');
+        return;
+    }
+    
     messages.forEach(msg => {
         msg.extra = msg.extra || {};
         msg.extra.ghost_summarized = true;
     });
+    
+    console.log(`[ghost] 已标记 ${messages.length} 条消息为已总结`);
 }
 
 // 定义一下模型输出，工具函数
@@ -145,7 +172,7 @@ function parseModelOutput(rawOutput) {
     }
 }
 
-// 偷偷蹲起来尾随
+// 偷偷蹲起来尾随（修复版）
 async function stealthSummarize(isInitial = false) {
     const notification = toastr.info("👻 鬼面尾随中...", null, {
         timeOut: 0,
@@ -157,15 +184,15 @@ async function stealthSummarize(isInitial = false) {
 
     try {
         // 1. 收集信息
-        const context = await collect_chat_messages(isInitial);
-        if (!context || context.length === 0) {
+        const messages = await collect_chat_messages(isInitial);
+        if (!messages || messages.length === 0) {
             toastr.warning("没有找到可总结的消息，鬼面悄悄退场了...");
             toastr.remove(notification);
             return;
         }
 
         // 2. 模型生成总结
-        const summaryContent = await generateSummary(context);
+        const summaryContent = await generateSummary(messages);
         if (!summaryContent?.trim()) {
             toastr.warning("总结失败或为空，鬼面望天叹气...");
             toastr.remove(notification);
@@ -176,10 +203,11 @@ async function stealthSummarize(isInitial = false) {
         await saveToWorldBook(summaryContent);
 
         // 4. 标记已处理消息
-        markMessagesSummarized(context);
+        markMessagesSummarized(messages);
 
         // 5. 移除提示
         toastr.remove(notification);
+        toastr.success("👻 鬼面尾随成功！信息已记录");
         console.log('[ghost] 总结完成，已写入世界书');
 
     } catch (err) {
@@ -189,14 +217,12 @@ async function stealthSummarize(isInitial = false) {
     }
 }
 
-
-
 //把模型生成的总结信息保存到世界书
 async function saveToWorldBook(summaryContent) {
     try {
         const currentWorldInfo = world_info;
         if (!currentWorldInfo || !currentWorldInfo.globalSelect) {
-            console.warn('没有激活的世界书，创建临时条目');
+            console.warn('[ghost] 没有激活的世界书，创建临时条目');
         }
 
         const summaryLines = summaryContent.split('\n').filter(line => line.trim());
@@ -212,6 +238,11 @@ async function saveToWorldBook(summaryContent) {
                 categorizedData[category].push(content);
             }
         });
+
+        if (Object.keys(categorizedData).length === 0) {
+            console.warn('[ghost] 没有找到有效的分类数据');
+            return;
+        }
 
         for (const [category, items] of Object.entries(categorizedData)) {
             const entryName = `关于我们_${category}_${Date.now()}`;
@@ -235,7 +266,7 @@ async function saveToWorldBook(summaryContent) {
                 useProbability: true
             });
 
-            console.log(`创建世界书条目: ${category} - ${items.length}条信息`);
+            console.log(`[ghost] 创建世界书条目: ${category} - ${items.length}条信息`);
         }
 
         await saveWorldInfo(currentWorldInfo?.name || 'default', currentWorldInfo, true);
@@ -252,10 +283,10 @@ function handleError(error) {
     if (error.message.includes('API')) {
         toastr.error(`AI接口异常: ${error.message.slice(0, 50)}...`);
     } else if (error.message.includes('worldBook')) {
-        console.warn('世界书打开失败');
+        console.warn('[ghost] 世界书打开失败');
     } else {
         toastr.error('未知错误，请查看控制台');
-        console.error('自动总结失败:', error);
+        console.error('[ghost] 自动总结失败:', error);
     }
 }
 

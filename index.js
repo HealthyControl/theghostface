@@ -377,17 +377,35 @@ async function stealthSummarize(isInitial = false) {
 }
 
 //把模型生成的总结信息保存到世界书
+// ✨ 修复的世界书保存函数
 async function saveToWorldBook(summaryContent) {
+    console.log('[ghost] === 开始保存到世界书 ===');
+    console.log('[ghost] 总结内容长度:', summaryContent.length);
+    
     try {
-        const currentWorldInfo = world_info;
-        if (!currentWorldInfo || !currentWorldInfo.globalSelect) {
-            console.warn('[ghost] 没有激活的世界书，创建临时条目');
+        // 1. 检查世界书状态
+        console.log('[ghost] 检查世界书状态...');
+        console.log('[ghost] world_info 对象:', world_info);
+        console.log('[ghost] world_info 类型:', typeof world_info);
+        
+        if (!world_info) {
+            console.warn('[ghost] world_info 未定义，尝试创建新的世界书');
+            // 这里可能需要手动创建世界书，但先试试直接报错
+            throw new Error('世界书未初始化，请先创建或加载一个世界书文件');
         }
-
+        
+        console.log('[ghost] 当前世界书名称:', world_info.name);
+        console.log('[ghost] 当前条目数量:', world_info.entries?.length || 0);
+        
+        // 2. 解析总结内容
+        console.log('[ghost] 开始解析总结内容...');
         const summaryLines = summaryContent.split('\n').filter(line => line.trim());
+        console.log('[ghost] 解析到', summaryLines.length, '行内容');
+        
         const categorizedData = {};
-
-        summaryLines.forEach(line => {
+        
+        summaryLines.forEach((line, index) => {
+            console.log(`[ghost] 处理第${index + 1}行:`, line);
             const match = line.match(/^\[(.+?)\]\s*(.+)$/);
             if (match) {
                 const [, category, content] = match;
@@ -395,59 +413,132 @@ async function saveToWorldBook(summaryContent) {
                     categorizedData[category] = [];
                 }
                 categorizedData[category].push(content);
+                console.log(`[ghost] 分类成功: ${category} -> ${content.slice(0, 30)}...`);
+            } else {
+                console.warn(`[ghost] 无法解析行:`, line);
             }
         });
 
-        if (Object.keys(categorizedData).length === 0) {
-            console.warn('[ghost] 没有找到有效的分类数据');
-            return;
+        const categoryCount = Object.keys(categorizedData).length;
+        console.log(`[ghost] 分类完成，共${categoryCount}个类别:`, Object.keys(categorizedData));
+
+        if (categoryCount === 0) {
+            throw new Error('没有找到有效的分类数据');
         }
 
+        // 3. 创建世界书条目
+        let successCount = 0;
         for (const [category, items] of Object.entries(categorizedData)) {
-            const entryName = `关于我们_${category}_${Date.now()}`;
-            const entryContent = items.join('\n');
-
-            const newEntry = createWorldInfoEntry(currentWorldInfo, null);
-            Object.assign(newEntry, {
-                comment: `鬼面自动总结 - ${category}`,
-                content: entryContent,
-                constant: true,
-                selective: false,
-                selectiveLogic: 0,
-                addMemo: true,
-                order: 999,
-                position: 0,
-                disable: false,
-                excludeRecursion: false,
-                preventRecursion: false,
-                delayUntilRecursion: false,
-                probability: 100,
-                useProbability: true
-            });
-
-            console.log(`[ghost] 创建世界书条目: ${category} - ${items.length}条信息`);
+            console.log(`[ghost] 创建类别"${category}"的条目，包含${items.length}个项目`);
+            
+            try {
+                // 尝试创建新条目
+                console.log('[ghost] 调用 createWorldInfoEntry...');
+                const newEntry = createWorldInfoEntry(world_info, null);
+                
+                if (!newEntry) {
+                    console.error('[ghost] createWorldInfoEntry 返回 null');
+                    continue;
+                }
+                
+                console.log('[ghost] 条目创建成功，UID:', newEntry.uid);
+                
+                // 设置条目属性
+                const entryContent = items.join('\n');
+                const entryName = `鬼面记录_${category}_${Date.now()}`;
+                
+                console.log('[ghost] 设置条目属性...');
+                Object.assign(newEntry, {
+                    comment: `鬼面自动总结 - ${category}`,
+                    content: entryContent,
+                    key: [category, '鬼面', '总结'],  // 触发关键词
+                    keysecondary: [],
+                    constant: false,    // 改为 false，避免总是激活
+                    selective: true,    // 改为 true，只有匹配关键词时才激活
+                    selectiveLogic: 0,
+                    addMemo: true,
+                    order: 100,
+                    position: 0,
+                    disable: false,
+                    excludeRecursion: false,
+                    preventRecursion: false,
+                    delayUntilRecursion: false,
+                    probability: 100,
+                    useProbability: false
+                });
+                
+                console.log(`[ghost] 条目"${entryName}"配置完成`);
+                successCount++;
+                
+            } catch (entryError) {
+                console.error(`[ghost] 创建条目"${category}"失败:`, entryError);
+                // 继续处理其他条目
+            }
+        }
+        
+        if (successCount === 0) {
+            throw new Error('所有条目创建均失败');
         }
 
-        await saveWorldInfo(currentWorldInfo?.name || 'default', currentWorldInfo, true);
+        // 4. 保存世界书
+        console.log('[ghost] 开始保存世界书...');
+        console.log('[ghost] 保存参数:', {
+            name: world_info.name,
+            hasWorldInfo: !!world_info,
+            force: true
+        });
+        
+        await saveWorldInfo(world_info.name, world_info, true);
+        console.log('[ghost] 世界书保存成功');
 
-        toastr.success(`👻 鬼面已将 ${Object.keys(categorizedData).length} 类信息存入世界书`);
+        // 5. 成功提示
+        const message = `👻 鬼面已将 ${successCount}/${categoryCount} 类信息存入世界书`;
+        toastr.success(message);
+        console.log(`[ghost] === 世界书保存完成 === 成功: ${successCount}, 失败: ${categoryCount - successCount}`);
+
     } catch (error) {
-        handleError(error);
+        console.error('[ghost] === 世界书保存失败 ===');
+        console.error('[ghost] 错误详情:', error);
+        
+        // 详细错误分析
+        if (error.message.includes('UID')) {
+            console.error('[ghost] 💡 UID分配失败，可能是世界书未正确初始化');
+            toastr.error('世界书未初始化，请先创建一个世界书文件');
+        } else if (error.message.includes('世界书未初始化')) {
+            console.error('[ghost] 💡 需要手动创建世界书');
+            toastr.error('请先在 World Info 页面创建一个世界书文件');
+        } else {
+            console.error('[ghost] 💡 未知世界书错误');
+            toastr.error('世界书保存失败: ' + error.message);
+        }
+        
         throw error;
     }
 }
 
-//世界书错误提示
-function handleError(error) {
-    if (error.message.includes('API')) {
-        toastr.error(`AI接口异常: ${error.message.slice(0, 50)}...`);
-    } else if (error.message.includes('worldBook')) {
-        console.warn('[ghost] 世界书打开失败');
+// ✨ 世界书状态检查函数（调试用）
+function checkWorldBookStatus() {
+    console.log('=== 世界书状态检查 ===');
+    console.log('world_info:', world_info);
+    console.log('world_info 类型:', typeof world_info);
+    
+    if (world_info) {
+        console.log('名称:', world_info.name);
+        console.log('条目数量:', world_info.entries?.length || 0);
+        console.log('全局选择:', world_info.globalSelect);
+        if (world_info.entries && world_info.entries.length > 0) {
+            console.log('第一个条目:', world_info.entries[0]);
+        }
     } else {
-        toastr.error('未知错误，请查看控制台');
-        console.error('[ghost] 自动总结失败:', error);
+        console.warn('⚠️ 世界书未加载');
     }
+    
+    // 检查世界书相关函数
+    console.log('createWorldInfoEntry 函数:', typeof createWorldInfoEntry);
+    console.log('saveWorldInfo 函数:', typeof saveWorldInfo);
+    console.log('loadWorldInfo 函数:', typeof loadWorldInfo);
 }
+
 // 错误捕获机制
 // 在浏览器控制台运行这个，捕获下一个错误
 window.addEventListener('error', function(e) {

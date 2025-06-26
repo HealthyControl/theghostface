@@ -420,7 +420,8 @@ function getActiveWorldInfo() {
     
     console.log(`[ghost] 当前世界书: "${world_info.name}", 条目数: ${world_info.entries.length}`);
     return world_info;
-}
+ }
+
 
 // ✅ 进一步简化的 saveToWorldBook 函数
 async function saveToWorldBook(summaryContent) {
@@ -669,7 +670,7 @@ function debugWorldInfo() {
     }
     
     console.log(`[ghost] ✅ 世界书准备就绪: "${world_info.name}", 条目数: ${world_info.entries.length}`);
-    return world_info;
+    return world_info;}
 
 // 🚀 快速测试函数
 function testWorldInfo() {

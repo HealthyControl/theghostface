@@ -160,27 +160,24 @@ ${contextText}
     
     try {
         // 修复：使用正确的 generateRaw 参数格式
-        const result = await generateRaw({
-            prompt: optimized_prompt,
-            use_mancer: false,
-            api_server: '',
-            legacy_api: false,
-            sampler_order: [],
-            temperature: 0.2,
-            top_p: 1,
-            top_k: 0,
-            max_context_length: 2000,
-            max_length: 500,
-            rep_pen: 1,
-            rep_pen_range: 0,
-            rep_pen_slope: 0,
-            no_repeat_ngram_size: 0,
-            memory: '',
-            authors_note: '',
-            authors_note_position: 2,
-            quiet: true
-        });
-
+    const result = await generateRaw(
+    optimized_prompt, // prompt
+    '',               // memory
+    true,             // quiet
+    false,            // use_mancer
+    false,            // system_prompt
+    null,             // authors_note
+    false             // legacy_api
+);
+console.log('generateRaw参数类型检查:', {
+    prompt: typeof optimized_prompt,
+    memory: typeof '',
+    quiet: typeof true,
+    use_mancer: typeof false,
+    system_prompt: typeof false,
+    authors_note: typeof null,
+    legacy_api: typeof false
+});
         console.log('[ghost] 生成结果:', result);
         return parseModelOutput(result);
         

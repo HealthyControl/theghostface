@@ -638,6 +638,10 @@ function debugWorldInfo() {
     };
 }
 
+// 🔧 修复后的 getActiveWorldInfo 函数 - 更宽松的检查
+function getActiveWorldInfo() {
+    console.log('[ghost] 检查当前世界书状态...');
+    
     // 先调试一下
     const debugInfo = debugWorldInfo();
     
@@ -667,11 +671,11 @@ function debugWorldInfo() {
     if (!Array.isArray(world_info.entries)) {
         console.warn('[ghost] world_info.entries 不是数组，正在初始化...');
         world_info.entries = [];
-         console.log(`[ghost] ✅ 世界书准备就绪: "${world_info.name}", 条目数: ${world_info.entries.length}`);
-    return world_info;
     }
     
-
+    console.log(`[ghost] ✅ 世界书准备就绪: "${world_info.name}", 条目数: ${world_info.entries.length}`);
+    return world_info;
+}
 
 // 🚀 快速测试函数
 function testWorldInfo() {
@@ -687,7 +691,6 @@ function testWorldInfo() {
         return null;
     }
 }
-
 // 添加slash命令
 registerSlashCommand(
     'gf_sum',

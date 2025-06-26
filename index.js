@@ -392,6 +392,7 @@ function getActiveWorldInfo() {
 }
 
 // ✨ 修复的世界书保存函数
+// ✨ 修复的世界书保存函数
 async function saveToWorldBook(summaryContent) {
     console.log('[ghost] === 开始保存到世界书 ===');
     console.log('[ghost] 总结内容长度:', summaryContent.length);
@@ -404,44 +405,23 @@ async function saveToWorldBook(summaryContent) {
         
         if (!world_info) {
             console.warn('[ghost] world_info 未定义，尝试创建新的世界书');
-            // 这里可能需要手动创建世界书，但先试试直接报错
             throw new Error('世界书未初始化，请先创建或加载一个世界书文件');
         }
         
         console.log('[ghost] 当前世界书名称:', world_info.name);
         console.log('[ghost] 当前条目数量:', world_info.entries?.length || 0);
 
-        if (!world_info) {
-            throw new Error('世界书未初始化，请先创建或加载一个世界书文件');
-        }
-
         if (!Array.isArray(world_info.entries)) {
             console.warn('[ghost] world_info.entries 不存在，正在初始化为空数组...');
             world_info.entries = [];
         }
         
-        for (const [category, items] of Object.entries(categorizedData)) {
-    try {
-        const realWorldInfo = getActiveWorldInfo();
-        const newEntry = createWorldInfoEntry(realWorldInfo, null);
-        if (!newEntry) {
-            console.error('[ghost] 条目创建失败：createWorldInfoEntry 返回 null');
-            continue;
-        }
-
-        // 设置 entry 属性...
-    } catch (e) {
-        console.error(`[ghost] 条目 ${category} 创建失败`, e);
-        continue; // ✅ 合法，仍在 for 内
-    }
-}
-
-        // 2. 解析总结内容
+        // 2. 解析总结内容 - 把这部分移到前面
         console.log('[ghost] 开始解析总结内容...');
         const summaryLines = summaryContent.split('\n').filter(line => line.trim());
         console.log('[ghost] 解析到', summaryLines.length, '行内容');
         
-        const categorizedData = {};
+        const categorizedData = {}; // ✅ 现在在使用之前声明
         
         summaryLines.forEach((line, index) => {
             console.log(`[ghost] 处理第${index + 1}行:`, line);
@@ -465,15 +445,15 @@ async function saveToWorldBook(summaryContent) {
             throw new Error('没有找到有效的分类数据');
         }
 
-        // 3. 创建世界书条目
+        // 3. 创建世界书条目 - 现在 categorizedData 已经定义了
         let successCount = 0;
         for (const [category, items] of Object.entries(categorizedData)) {
             console.log(`[ghost] 创建类别"${category}"的条目，包含${items.length}个项目`);
             
             try {
-                // 尝试创建新条目
-               const realWorldInfo = getActiveWorldInfo();
-               const newEntry = createWorldInfoEntry(realWorldInfo, null);
+                // 获取当前世界书
+                const realWorldInfo = getActiveWorldInfo();
+                const newEntry = createWorldInfoEntry(realWorldInfo, null);
                 
                 if (!newEntry) {
                     console.error('[ghost] createWorldInfoEntry 返回 null');
@@ -521,13 +501,15 @@ async function saveToWorldBook(summaryContent) {
 
         // 4. 保存世界书
         console.log('[ghost] 开始保存世界书...');
+        
+        // 修复这里：使用 world_info 而不是 realWorldInfo
         console.log('[ghost] 保存参数:', {
             name: world_info.name,
             hasWorldInfo: !!world_info,
             force: true
         });
         
-        await saveWorldInfo(realWorldInfo.name, realWorldInfo, true);
+        await saveWorldInfo(world_info.name, world_info, true);
         console.log('[ghost] 世界书保存成功');
 
         // 5. 成功提示

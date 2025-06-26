@@ -377,62 +377,30 @@ async function stealthSummarize(isInitial = false) {
 }
 
 //把模型生成的总结信息保存到世界书
-/*这段好像不太对
-// 替代world_info的函数
-function getActiveWorldInfo() {
-    const globalSelect = world_info?.globalSelect?.[0]; 
-    const trueWorldInfo = WORLD_INFOS?.[globalSelect];
-    
-    if (!trueWorldInfo || !trueWorldInfo.name) {
-        toastr.error(`⚠️ 找不到绑定的世界书数据 (${globalSelect})，请检查 World Info 设置`);
-        throw new Error('未能加载当前绑定的 world_info 文件对象');
-    }
-    
-    return trueWorldInfo;
-}
-    */
-
-/*
-// 直接使用全局 world_info
-function getActiveWorldInfo() {
-    console.log('[ghost] 检查当前世界书状态...');
-    console.log('[ghost] world_info 对象:', world_info);
-    console.log('[ghost] world_info 类型:', typeof world_info);
-    
-    // 直接检查全局 world_info 对象
-    if (!world_info) {
-        console.error('[ghost] world_info 未定义或为 null');
-        toastr.error(`⚠️ 世界书未加载，请先在 World Info 页面创建或加载一个世界书文件`);
-        throw new Error('世界书未加载，请先创建或加载一个世界书文件');
-    }
-    
-    if (!world_info.name) {
-        console.error('[ghost] world_info.name 未定义');
-        toastr.error(`⚠️ 世界书名称无效，请检查世界书是否正确加载`);
-        throw new Error('世界书名称无效，可能未正确加载');
-    }
-    
-    // 确保 entries 数组存在
-    if (!Array.isArray(world_info.entries)) {
-        console.warn('[ghost] world_info.entries 不是数组，正在初始化...');
-        world_info.entries = [];
-    }
-    
-    console.log(`[ghost] 当前世界书: "${world_info.name}", 条目数: ${world_info.entries.length}`);
-    return world_info;
- }
-*/
-
-// ✅ 进一步简化的 saveToWorldBook 函数
+// 🤬再修，这狗阉的世界书
 async function saveToWorldBook(summaryContent) {
     console.log('[ghost] === 开始保存到世界书 ===');
     console.log('[ghost] 总结内容长度:', summaryContent.length);
     
     try {
-        // 1. 检查并获取世界书
-        const activeWorldInfo = getActiveWorldInfo(); // 这里会抛出错误如果世界书无效
+        // 1. 获取当前选中的世界书名称
+        const worldSelect = document.querySelector('#world_editor_select');
+        if (!worldSelect || !worldSelect.value) {
+            throw new Error('请先在 World Info 页面选择一个世界书');
+        }
         
-        // 2. 解析总结内容
+        const worldBookName = worldSelect.selectedOptions[0].textContent;
+        console.log('[ghost] 当前世界书:', worldBookName);
+        
+        // 2. 加载世界书数据
+        const worldBookData = await loadWorldInfo(worldBookName);
+        if (!worldBookData) {
+            throw new Error('无法加载世界书数据');
+        }
+        
+        console.log('[ghost] 世界书加载成功，当前条目数:', Object.keys(worldBookData.entries || {}).length);
+        
+        // 3. 解析总结内容
         console.log('[ghost] 开始解析总结内容...');
         const summaryLines = summaryContent.split('\n').filter(line => line.trim());
         console.log('[ghost] 解析到', summaryLines.length, '行内容');
@@ -461,14 +429,14 @@ async function saveToWorldBook(summaryContent) {
             throw new Error('没有找到有效的分类数据');
         }
 
-        // 3. 创建世界书条目
+        // 4. 创建世界书条目
         let successCount = 0;
         for (const [category, items] of Object.entries(categorizedData)) {
             console.log(`[ghost] 创建类别"${category}"的条目，包含${items.length}个项目`);
             
             try {
-                // 直接使用 activeWorldInfo（就是 world_info）
-                const newEntry = createWorldInfoEntry(activeWorldInfo, null);
+                // ✅ 正确的调用方式：第一个参数是 uid（null表示自动生成），第二个参数是世界书数据
+                const newEntry = createWorldInfoEntry(null, worldBookData);
                 
                 if (!newEntry) {
                     console.error('[ghost] createWorldInfoEntry 返回 null');
@@ -479,29 +447,29 @@ async function saveToWorldBook(summaryContent) {
                 
                 // 设置条目属性
                 const entryContent = items.join('\n');
-                const entryName = `鬼面记录_${category}_${Date.now()}`;
+                const entryComment = `鬼面自动总结 - ${category}`;
                 
                 console.log('[ghost] 设置条目属性...');
                 Object.assign(newEntry, {
-                    comment: `鬼面自动总结 - ${category}`,
+                    comment: entryComment,
                     content: entryContent,
-                    key: [category, '鬼面', '总结'],
-                    keysecondary: [],
-                    constant: false,
-                    selective: true,
-                    selectiveLogic: 0,
-                    addMemo: true,
-                    order: 100,
-                    position: 0,
-                    disable: false,
+                    key: [category, '鬼面', '总结'], // 关键词数组
+                    keysecondary: [], // 次要关键词
+                    constant: false, // 不是常驻条目
+                    selective: true, // 启用选择性激活
+                    selectiveLogic: 0, // 逻辑模式
+                    addMemo: true, // 添加到记忆
+                    order: 100, // 顺序
+                    position: 0, // 位置（0=在用户消息之前）
+                    disable: false, // 不禁用
                     excludeRecursion: false,
                     preventRecursion: false,
                     delayUntilRecursion: false,
-                    probability: 100,
-                    useProbability: false
+                    probability: 100, // 触发概率
+                    useProbability: false // 不使用概率
                 });
                 
-                console.log(`[ghost] 条目"${entryName}"配置完成`);
+                console.log(`[ghost] 条目"${entryComment}"配置完成`);
                 successCount++;
                 
             } catch (entryError) {
@@ -514,19 +482,27 @@ async function saveToWorldBook(summaryContent) {
             throw new Error('所有条目创建均失败');
         }
 
-        // 4. 保存世界书
+        // 5. 保存世界书
         console.log('[ghost] 开始保存世界书...');
         console.log('[ghost] 保存参数:', {
-            name: activeWorldInfo.name,
-            entriesCount: activeWorldInfo.entries.length,
+            name: worldBookName,
+            entriesCount: Object.keys(worldBookData.entries).length,
             force: true
         });
         
-        await saveWorldInfo(activeWorldInfo.name, activeWorldInfo, true);
+        // ✅ 使用正确的保存方式
+        await saveWorldInfo(worldBookName, worldBookData, true);
         console.log('[ghost] 世界书保存成功');
 
-        // 5. 成功提示
-        const message = `👻 鬼面已将 ${successCount}/${categoryCount} 类信息存入世界书`;
+        // 6. 刷新世界书显示（如果当前在世界书页面）
+        if (document.querySelector('#world_editor_select')) {
+            // 触发世界书重新加载以显示新条目
+            const event = new Event('change', { bubbles: true });
+            document.querySelector('#world_editor_select').dispatchEvent(event);
+        }
+
+        // 7. 成功提示
+        const message = `👻 鬼面已将 ${successCount}/${categoryCount} 类信息存入世界书 "${worldBookName}"`;
         toastr.success(message);
         console.log(`[ghost] === 世界书保存完成 === 成功: ${successCount}, 失败: ${categoryCount - successCount}`);
 
@@ -535,9 +511,12 @@ async function saveToWorldBook(summaryContent) {
         console.error('[ghost] 错误详情:', error);
         
         // 详细错误分析
-        if (error.message.includes('世界书未加载')) {
-            console.error('[ghost] 💡 需要先创建世界书');
-            toastr.error('请先在 World Info 页面创建一个世界书文件');
+        if (error.message.includes('请先在 World Info 页面选择')) {
+            console.error('[ghost] 💡 需要先选择世界书');
+            toastr.error('请先在 World Info 页面选择一个世界书');
+        } else if (error.message.includes('无法加载世界书')) {
+            console.error('[ghost] 💡 世界书加载失败');
+            toastr.error('无法加载世界书数据，请检查世界书是否存在');
         } else if (error.message.includes('UID')) {
             console.error('[ghost] 💡 UID分配失败');
             toastr.error('世界书条目创建失败，请检查世界书状态');
@@ -550,92 +529,13 @@ async function saveToWorldBook(summaryContent) {
     }
 }
 
-// ✨ 世界书状态检查函数（调试用）
-function checkWorldBookStatus() {
-    console.log('=== 世界书状态检查 ===');
-    console.log('world_info:', world_info);
-    console.log('world_info 类型:', typeof world_info);
-    
-    if (world_info) {
-        console.log('名称:', world_info.name);
-        console.log('条目数量:', world_info.entries?.length || 0);
-        console.log('全局选择:', world_info.globalSelect);
-        if (world_info.entries && world_info.entries.length > 0) {
-            console.log('第一个条目:', world_info.entries[0]);
-        }
-    } else {
-        console.warn('⚠️ 世界书未加载');
+// 辅助函数：检查世界书是否可用
+function checkWorldBookAvailable() {
+    const worldSelect = document.querySelector('#world_editor_select');
+    if (!worldSelect || !worldSelect.value) {
+        return false;
     }
-    
-    // 检查世界书相关函数
-    console.log('createWorldInfoEntry 函数:', typeof createWorldInfoEntry);
-    console.log('saveWorldInfo 函数:', typeof saveWorldInfo);
-    console.log('loadWorldInfo 函数:', typeof loadWorldInfo);
-}
-
-// 错误捕获机制
-// 在浏览器控制台运行这个，捕获下一个错误
-window.addEventListener('error', function(e) {
-    console.log('🔥 捕获到错误:', e.error);
-    console.log('🔥 错误堆栈:', e.error.stack);
-    console.log('🔥 错误位置:', e.filename, e.lineno, e.colno);
-});
-
-// 也可以捕获 Promise 错误
-window.addEventListener('unhandledrejection', function(e) {
-    console.log('🔥 捕获到 Promise 错误:', e.reason);
-});
-
-// 🔍 调试函数：完整打印 world_info 对象结构
-function debugWorldInfo() {
-    console.log('=== 🔍 完整的世界书调试信息 ===');
-    
-    // 1. 基本信息
-    console.log('1. world_info 是否存在:', !!world_info);
-    console.log('2. world_info 类型:', typeof world_info);
-    console.log('3. world_info 是否为 null:', world_info === null);
-    console.log('4. world_info 是否为 undefined:', world_info === undefined);
-    
-    if (world_info) {
-        // 2. 对象结构
-        console.log('5. world_info 的所有属性:', Object.keys(world_info));
-        console.log('6. world_info 完整对象:', world_info);
-        
-        // 3. 关键属性检查
-        console.log('7. world_info.name:', world_info.name);
-        console.log('8. world_info.filename:', world_info.filename);
-        console.log('9. world_info.entries:', world_info.entries);
-        console.log('10. world_info.entries 类型:', typeof world_info.entries);
-        console.log('11. world_info.entries 是数组吗:', Array.isArray(world_info.entries));
-        
-        if (world_info.entries) {
-            console.log('12. entries 长度:', world_info.entries.length);
-        }
-        
-        // 4. 其他可能的名称属性
-        console.log('13. 检查其他可能的名称属性:');
-        console.log('    - world_info.title:', world_info.title);
-        console.log('    - world_info.worldInfoName:', world_info.worldInfoName);
-        console.log('    - world_info.file:', world_info.file);
-        console.log('    - world_info.path:', world_info.path);
-        
-        // 5. globalSelect 相关
-        console.log('14. world_info.globalSelect:', world_info.globalSelect);
-        
-    } else {
-        console.log('❌ world_info 对象不存在或为空');
-    }
-    
-    console.log('=== 🔍 调试信息结束 ===');
-    
-    // 返回一个简化的状态报告
-    return {
-        exists: !!world_info,
-        type: typeof world_info,
-        hasName: !!(world_info && world_info.name),
-        hasEntries: !!(world_info && world_info.entries),
-        allKeys: world_info ? Object.keys(world_info) : []
-    };
+    return true;
 }
 
 // 🔧 修复后的 getActiveWorldInfo 函数 - 更宽松的检查

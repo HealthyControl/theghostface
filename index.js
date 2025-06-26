@@ -1,5 +1,5 @@
 // TheGhostFace
-// 062525
+// 062625
 // 机器人
 
 import {
@@ -34,6 +34,7 @@ import {
     saveWorldInfo, 
     world_info 
 } from '../../../world-info.js';
+import { APP, BASE, DERIVED, EDITOR, SYSTEM, USER } from './core/manager.js';
 import { getPresetManager } from '../../../preset-manager.js'// 预设管理，可以联动使用
 import { formatInstructModeChat } from '../../../instruct-mode.js';// 把聊天信息转换成LLM语言
 import { loadMovingUIState, renderStoryString, power_user } from '../../../power-user.js';// 高级用户深度定制化
@@ -52,21 +53,30 @@ const MODULE_NAME = 'the_ghost_face'; // 必须全小写或者下划线
 const MODULE_NAME_FANCY = '鬼面'; //支持多语言显示
 const PROGRESS_BAR_ID = `${MODULE_NAME}_progress_bar`;
 
-// ✨ 工具函数：统一获取消息数组（修复版）
+
+// ✨ 工具函数：统一获取消息数组
+/**
+ * 统一提取消息数组（适配插件返回结构差异）
+ * @param {any} source - getContext() 或其他插件返回的上下文对象
+ * @returns {Array} 消息数组（可能为空）
+ */
 function getMessageArray(source) {
-    // 优先检查 SillyTavern 标准结构
-    if (Array.isArray(source?.chat)) return source.chat;
-    
-    // 备用检查
-    if (Array.isArray(source?.messages)) return source.messages;
-    if (Array.isArray(source)) return source;
-    
+    if (Array.isArray(source?.chat)) return source.chat;// 优先检查用户上下文结构
+    if (Array.isArray(source?.messages)) return source.messages; // 次级结构：插件内部接口
+    if (Array.isArray(source)) return source;// 直接是数组
+    // 兼容 generateQuietPrompt 结构（无法处理）
+    if (typeof source?.generateQuietPrompt === 'function') {
+        console.warn('[ghost] getContext 返回封装对象，无法提取消息数组:', source);
+        return [];
+    }
+
     console.warn('[ghost] 未识别的上下文结构:', source);
     return [];
 }
 
+// ✨ 工具函数：异步工具,封装 getContext() 的异步调用
 // ✨ 收集消息（全量或增量）
-async function collect_chat_messages(isInitial = false) {
+async function getGhostContextMessages(isInitial = false) {
     const context = await getContext(); 
     const messages = getMessageArray(context);
 
@@ -78,7 +88,7 @@ async function collect_chat_messages(isInitial = false) {
     }
     
     if (messages.length === 0) {
-        console.warn('[ghost] collect_chat_messages: 没有找到任何消息');
+        console.warn('[ghost] getGhostContextMessages: 没有找到任何消息');
         return [];
     }
 
@@ -218,7 +228,7 @@ async function stealthSummarize(isInitial = false) {
 
     try {
         // 1. 收集信息
-        const messages = await collect_chat_messages(isInitial);
+        const messages = await getGhostContextMessages();
         if (!messages || messages.length === 0) {
             toastr.warning("没有找到可总结的消息，鬼面悄悄退场了...");
             toastr.remove(notification);

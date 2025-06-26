@@ -136,7 +136,7 @@ async function generateSummary(messages) {
         })
         .join('\n');
 
-    const optimized_prompt = `请从最近40条对话中提取可复用剧情细节：
+    const optimized_prompt = `你是一个专业且充满热心的故事总结助手，请从最近40条对话中提取可复用剧情细节：
 1. 筛选标准（必须满足）：
    - 明确喜好/恐惧（比如"喜欢/讨厌/害怕"等关键词）
    - 具体梦境/回忆（比如"梦见/想起"等）
@@ -158,26 +158,22 @@ ${contextText}
     console.log('[ghost] 开始生成总结...');
     console.log('[ghost] 提示词长度:', optimized_prompt.length);
     
-
     try {
-        // 使用 ST 内置的 generateRaw
-        const result = await generateRaw({
-            prompt: optimized_prompt,
-            temperature: 0.3,           // 更保守的温度
-            max_length: 500,            // 生成长度
-            stop_at_sentence: true,     // 避免截断句子
-            use_default_badwordsids: false, // 禁用默认敏感词过滤
-            quiet: true                 // 静默模式
-        });
-
-        if (!result?.trim()) {
-            throw new Error("API 返回空内容");
-        }
-
+        const context = await getContext();
+        const result = await context.generateQuietPrompt(
+            optimized_prompt,
+            true,      // quiet 模式（不显示在聊天窗口）
+            false,     // 不注入世界书
+            "你是一个专业的故事总结助手" // 系统提示（可选）
+        );
+        
         return parseModelOutput(result);
     } catch (error) {
-        console.error('生成失败:', error);
-        throw new Error(`ST 内部生成失败: ${error.message}`);
+        console.error("生成失败详情:", {
+            error: error.stack,
+            prompt: optimized_prompt
+        });
+        throw new Error("ST 生成失败: " + error.message);
     }
 }
 

@@ -75,7 +75,6 @@ function getMessageArray(source) {
 
 // ✨ 工具函数：异步工具,封装 getContext() 的异步调用
 // ✨ 收集消息（全量或增量）
-// ✨ 修复后的消息获取函数
 async function getGhostContextMessages(isInitial = false) {
     const context = await getContext(); 
     const messages = getMessageArray(context);
@@ -87,30 +86,15 @@ async function getGhostContextMessages(isInitial = false) {
         return [];
     }
 
-    // 取消息范围：初始化时取全部，否则取最近40条
-    const sourceMessages = isInitial ? messages : messages.slice(-40);
-    
-    const filtered = sourceMessages.filter(msg => {
+    const filtered = messages.slice(isInitial ? 0 : -40).filter(msg => {
         // 跳过已总结的消息
         if (msg.extra?.ghost_summarized) return false;
         
-        // 判断消息类型
-        const isUserMessage = msg.is_user === true;
-        const isSystemMessage = msg.is_system === true;
-        const isCharacterMessage = !msg.is_user && !msg.is_system && msg.mes && msg.mes.trim();
-        
-        const isValidMessage = isUserMessage || isSystemMessage || isCharacterMessage;
-        
-        console.log('[ghost] 检查消息:', {
-            name: msg.name || 'Unknown',
-            is_user: msg.is_user,
-            is_system: msg.is_system,
-            has_content: !!msg.mes,
-            content_preview: msg.mes ? msg.mes.slice(0, 30) + '...' : '',
-            is_valid: isValidMessage,
-            already_summarized: !!msg.extra?.ghost_summarized
-        });
-        
+        // ✨ 关键修复：包含角色消息
+        const isValidMessage = msg.is_user ||           // 用户消息
+                              msg.is_system ||         // 系统消息  
+                              (!msg.is_user && !msg.is_system && msg.mes); // 角色消息
+                              
         return isValidMessage;
     });
     
@@ -118,104 +102,41 @@ async function getGhostContextMessages(isInitial = false) {
     return filtered;
 }
 
-// ✨ 防重复执行的总结函数
-let isCurrentlySummarizing = false;
-
-async function stealthSummarize(isInitial = false) {
-    // 防止重复执行
-    if (isCurrentlySummarizing) {
-        console.log('[ghost] 总结正在进行中，跳过重复调用');
-        return;
-    }
-    
-    isCurrentlySummarizing = true;
-    const notification = toastr.info("👻 鬼面尾随中...", null, {
-        timeOut: 0,
-        closeButton: false,
-        progressBar: false,
-        hideDuration: 0,
-        positionClass: "toast-bottom-left"
-    });
-
-    try {
-        console.log('[ghost] 开始执行总结流程...');
-        
-        // 1. 收集信息
-        const messages = await getGhostContextMessages(isInitial);
-        if (!messages || messages.length === 0) {
-            toastr.warning("没有找到可总结的消息，鬼面悄悄退场了...");
-            return;
-        }
-
-        console.log(`[ghost] 准备总结 ${messages.length} 条消息`);
-
-        // 2. 模型生成总结
-        const summaryContent = await generateSummary(messages);
-        if (!summaryContent?.trim()) {
-            toastr.warning("总结失败或为空，鬼面望天叹气...");
-            return;
-        }
-
-        console.log('[ghost] 总结内容生成完成:', summaryContent.slice(0, 100) + '...');
-
-        // 3. 存入世界书
-        await saveToWorldBook(summaryContent);
-
-        // 4. 标记已处理消息
-        markMessagesSummarized(messages);
-
-        toastr.success("👻 鬼面尾随成功！信息已记录");
-        console.log('[ghost] 总结完成，已写入世界书');
-
-    } catch (err) {
-        toastr.error("尾随被看破: " + err.message);
-        console.error('[ghost] stealthSummarize error:', err);
-    } finally {
-        // 清理状态
-        toastr.remove(notification);
-        isCurrentlySummarizing = false;
-        console.log('[ghost] 总结流程结束');
-    }
-}
-
-// ✨ 优化的总结生成函数
+// ✨ 模型总结生成（修复版）
 async function generateSummary(messages) {
     if (!messages || messages.length === 0) {
         console.warn('[ghost] generateSummary: 没有可用消息');
         return '';
     }
 
-    console.log(`[ghost] 开始为 ${messages.length} 条消息生成总结`);
-
     const contextText = messages
-        .map((msg, index) => {
-            // 确定说话者
-            let speaker;
-            if (msg.is_user) {
-                speaker = '{{user}}';
-            } else if (msg.is_system) {
-                speaker = 'System';
+        .map(msg => {
+            const speaker = msg.is_user ? '{{user}}' : '{{char}}';
+            // 处理不同的消息内容格式
+            let content = '';
+            if (typeof msg.mes === 'string') {
+                content = msg.mes;
+            } else if (typeof msg.text === 'string') {
+                content = msg.text;
+            } else if (typeof msg.content === 'string') {
+                content = msg.content;
+            } else if (msg.mes && typeof msg.mes === 'object') {
+                content = JSON.stringify(msg.mes);
+            } else if (msg.text && typeof msg.text === 'object') {
+                content = JSON.stringify(msg.text);
             } else {
-                speaker = msg.name || '{{char}}';
+                content = '[无内容]';
             }
-            
-            // 提取消息内容
-            const content = msg.mes || msg.text || msg.content || '[无内容]';
-            
-            console.log(`[ghost] 消息 ${index + 1}: ${speaker} - ${content.slice(0, 50)}...`);
-            
             return `${speaker}: ${content}`;
         })
         .join('\n');
 
-    const optimized_prompt = `你是一个专业且充满热心的故事总结助手，请从对话中提取可复用剧情细节：
-
+    const optimized_prompt = `你是一个专业且充满热心的故事总结助手，请从最近40条对话中提取可复用剧情细节：
 1. 筛选标准（必须满足）：
    - 明确喜好/恐惧（比如"喜欢/讨厌/害怕"等关键词）
    - 具体梦境/回忆（比如"梦见/想起"等）
    - 重要人际关系（出现人名或关系称谓）
    - 角色与用户的独特互动
-
 2. 输出要求：
    - 每行一个细节，格式：[类型] 内容
    - 保留原始关键词
@@ -229,29 +150,25 @@ ${contextText}
 [恐惧] 用户害怕檀香气味
 [事件] 角色玩游戏很菜被用户嘲笑了`;
 
+    console.log('[ghost] 开始生成总结...');
     console.log('[ghost] 提示词长度:', optimized_prompt.length);
     
     try {
         const context = await getContext();
-        console.log('[ghost] 调用 generateQuietPrompt...');
-        
         const result = await context.generateQuietPrompt(
             optimized_prompt,
-            true,      // quiet 模式
+            true,      // quiet 模式（不显示在聊天窗口）
             false,     // 不注入世界书
-            "你是一个专业的故事总结助手"
+            "你是一个专业的故事总结助手" // 系统提示（可选）
         );
-        
-        console.log('[ghost] AI 返回结果:', result ? result.slice(0, 200) + '...' : 'null');
         
         return parseModelOutput(result);
     } catch (error) {
-        console.error('[ghost] generateSummary 详细错误:', {
-            error: error.message,
-            stack: error.stack,
-            promptLength: optimized_prompt.length
+        console.error("生成失败详情:", {
+            error: error.stack,
+            prompt: optimized_prompt
         });
-        throw new Error("总结生成失败: " + error.message);
+        throw new Error("ST 生成失败: " + error.message);
     }
 }
 

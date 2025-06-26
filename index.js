@@ -377,6 +377,20 @@ async function stealthSummarize(isInitial = false) {
 }
 
 //把模型生成的总结信息保存到世界书
+
+// 替代world_info的函数
+function getActiveWorldInfo() {
+    const globalSelect = world_info?.globalSelect?.[0]; 
+    const trueWorldInfo = WORLD_INFOS?.[globalSelect];
+    
+    if (!trueWorldInfo || !trueWorldInfo.name) {
+        toastr.error(`⚠️ 找不到绑定的世界书数据 (${globalSelect})，请检查 World Info 设置`);
+        throw new Error('未能加载当前绑定的 world_info 文件对象');
+    }
+    
+    return trueWorldInfo;
+}
+
 // ✨ 修复的世界书保存函数
 async function saveToWorldBook(summaryContent) {
     console.log('[ghost] === 开始保存到世界书 ===');
@@ -408,7 +422,8 @@ async function saveToWorldBook(summaryContent) {
         
         for (const [category, items] of Object.entries(categorizedData)) {
     try {
-        const newEntry = createWorldInfoEntry(world_info, null);
+        const realWorldInfo = getActiveWorldInfo();
+        const newEntry = createWorldInfoEntry(realWorldInfo, null);
         if (!newEntry) {
             console.error('[ghost] 条目创建失败：createWorldInfoEntry 返回 null');
             continue;
@@ -457,8 +472,8 @@ async function saveToWorldBook(summaryContent) {
             
             try {
                 // 尝试创建新条目
-                console.log('[ghost] 调用 createWorldInfoEntry...');
-                const newEntry = createWorldInfoEntry(world_info, null);
+               const realWorldInfo = getActiveWorldInfo();
+               const newEntry = createWorldInfoEntry(realWorldInfo, null);
                 
                 if (!newEntry) {
                     console.error('[ghost] createWorldInfoEntry 返回 null');
@@ -512,7 +527,7 @@ async function saveToWorldBook(summaryContent) {
             force: true
         });
         
-        await saveWorldInfo(world_info.name, world_info, true);
+        await saveWorldInfo(realWorldInfo.name, realWorldInfo, true);
         console.log('[ghost] 世界书保存成功');
 
         // 5. 成功提示

@@ -158,32 +158,26 @@ ${contextText}
     console.log('[ghost] 开始生成总结...');
     console.log('[ghost] 提示词长度:', optimized_prompt.length);
     
+
     try {
-        // 修复：使用正确的 generateRaw 参数格式
-    const result = await generateRaw(
-    optimized_prompt, // prompt
-    '',               // memory
-    true,             // quiet
-    false,            // use_mancer
-    false,            // system_prompt
-    null,             // authors_note
-    false             // legacy_api
-);
-console.log('generateRaw参数类型检查:', {
-    prompt: typeof optimized_prompt,
-    memory: typeof '',
-    quiet: typeof true,
-    use_mancer: typeof false,
-    system_prompt: typeof false,
-    authors_note: typeof null,
-    legacy_api: typeof false
-});
-        console.log('[ghost] 生成结果:', result);
+        // 使用 ST 内置的 generateRaw
+        const result = await generateRaw({
+            prompt: optimized_prompt,
+            temperature: 0.3,           // 更保守的温度
+            max_length: 500,            // 生成长度
+            stop_at_sentence: true,     // 避免截断句子
+            use_default_badwordsids: false, // 禁用默认敏感词过滤
+            quiet: true                 // 静默模式
+        });
+
+        if (!result?.trim()) {
+            throw new Error("API 返回空内容");
+        }
+
         return parseModelOutput(result);
-        
     } catch (error) {
-        console.error('[ghost] generateRaw 调用失败:', error);
-        throw new Error(`生成总结失败: ${error.message}`);
+        console.error('生成失败:', error);
+        throw new Error(`ST 内部生成失败: ${error.message}`);
     }
 }
 

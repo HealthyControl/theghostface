@@ -72,16 +72,29 @@ async function collect_chat_messages(isInitial = false) {
 
     console.log(`[ghost] 获取到 ${messages.length} 条消息`);
     
+    // 调试：查看消息结构
+    if (messages.length > 0) {
+        console.log('[ghost] 第一条消息结构:', JSON.stringify(messages[0], null, 2));
+    }
+    
     if (messages.length === 0) {
         console.warn('[ghost] collect_chat_messages: 没有找到任何消息');
         return [];
     }
 
     if (isInitial) {
-        const filtered = messages.filter(msg =>
-            !msg.extra?.ghost_summarized &&
-            (msg.is_user || msg.is_system)
-        );
+        const filtered = messages.filter(msg => {
+            // 调试每条消息的属性
+            console.log('[ghost] 检查消息:', {
+                is_user: msg.is_user,
+                is_system: msg.is_system,
+                has_ghost_summarized: !!msg.extra?.ghost_summarized,
+                keys: Object.keys(msg)
+            });
+            
+            return !msg.extra?.ghost_summarized &&
+                   (msg.is_user || msg.is_system);
+        });
         console.log(`[ghost] 初始筛选: ${filtered.length} 条消息`);
         return filtered;
     }
@@ -126,7 +139,22 @@ async function generateSummary(messages) {
     const contextText = messages
         .map(msg => {
             const speaker = msg.is_user ? '{{user}}' : '{{char}}';
-            return `${speaker}: ${msg.mes || msg.text || ''}`;
+            // 处理不同的消息内容格式
+            let content = '';
+            if (typeof msg.mes === 'string') {
+                content = msg.mes;
+            } else if (typeof msg.text === 'string') {
+                content = msg.text;
+            } else if (typeof msg.content === 'string') {
+                content = msg.content;
+            } else if (msg.mes && typeof msg.mes === 'object') {
+                content = JSON.stringify(msg.mes);
+            } else if (msg.text && typeof msg.text === 'object') {
+                content = JSON.stringify(msg.text);
+            } else {
+                content = '[无内容]';
+            }
+            return `${speaker}: ${content}`;
         })
         .join('\n');
 

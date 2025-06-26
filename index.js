@@ -585,6 +585,111 @@ window.addEventListener('unhandledrejection', function(e) {
     console.log('🔥 捕获到 Promise 错误:', e.reason);
 });
 
+// 🔍 调试函数：完整打印 world_info 对象结构
+function debugWorldInfo() {
+    console.log('=== 🔍 完整的世界书调试信息 ===');
+    
+    // 1. 基本信息
+    console.log('1. world_info 是否存在:', !!world_info);
+    console.log('2. world_info 类型:', typeof world_info);
+    console.log('3. world_info 是否为 null:', world_info === null);
+    console.log('4. world_info 是否为 undefined:', world_info === undefined);
+    
+    if (world_info) {
+        // 2. 对象结构
+        console.log('5. world_info 的所有属性:', Object.keys(world_info));
+        console.log('6. world_info 完整对象:', world_info);
+        
+        // 3. 关键属性检查
+        console.log('7. world_info.name:', world_info.name);
+        console.log('8. world_info.filename:', world_info.filename);
+        console.log('9. world_info.entries:', world_info.entries);
+        console.log('10. world_info.entries 类型:', typeof world_info.entries);
+        console.log('11. world_info.entries 是数组吗:', Array.isArray(world_info.entries));
+        
+        if (world_info.entries) {
+            console.log('12. entries 长度:', world_info.entries.length);
+        }
+        
+        // 4. 其他可能的名称属性
+        console.log('13. 检查其他可能的名称属性:');
+        console.log('    - world_info.title:', world_info.title);
+        console.log('    - world_info.worldInfoName:', world_info.worldInfoName);
+        console.log('    - world_info.file:', world_info.file);
+        console.log('    - world_info.path:', world_info.path);
+        
+        // 5. globalSelect 相关
+        console.log('14. world_info.globalSelect:', world_info.globalSelect);
+        
+    } else {
+        console.log('❌ world_info 对象不存在或为空');
+    }
+    
+    console.log('=== 🔍 调试信息结束 ===');
+    
+    // 返回一个简化的状态报告
+    return {
+        exists: !!world_info,
+        type: typeof world_info,
+        hasName: !!(world_info && world_info.name),
+        hasEntries: !!(world_info && world_info.entries),
+        allKeys: world_info ? Object.keys(world_info) : []
+    };
+}
+
+// 🔧 修复后的 getActiveWorldInfo 函数 - 更宽松的检查
+function getActiveWorldInfo() {
+    console.log('[ghost] 检查当前世界书状态...');
+    
+    // 先调试一下
+    const debugInfo = debugWorldInfo();
+    
+    if (!world_info) {
+        console.error('[ghost] world_info 未定义或为 null');
+        toastr.error(`⚠️ 世界书未加载，请先在 World Info 页面创建或加载一个世界书文件`);
+        throw new Error('世界书未加载，请先创建或加载一个世界书文件');
+    }
+    
+    // 🔥 关键修复：检查多种可能的名称属性
+    const worldName = world_info.name || 
+                     world_info.filename || 
+                     world_info.title || 
+                     world_info.worldInfoName || 
+                     'DefaultWorldInfo';
+    
+    if (!worldName || worldName === 'DefaultWorldInfo') {
+        console.warn('[ghost] 世界书名称为空，使用默认名称');
+        // 不抛出错误，继续执行
+        world_info.name = 'GhostFace_WorldBook_' + Date.now();
+        console.log('[ghost] 设置临时名称:', world_info.name);
+    } else {
+        world_info.name = worldName; // 确保 name 属性存在
+    }
+    
+    // 确保 entries 数组存在
+    if (!Array.isArray(world_info.entries)) {
+        console.warn('[ghost] world_info.entries 不是数组，正在初始化...');
+        world_info.entries = [];
+    }
+    
+    console.log(`[ghost] ✅ 世界书准备就绪: "${world_info.name}", 条目数: ${world_info.entries.length}`);
+    return world_info;
+}
+
+// 🚀 快速测试函数
+function testWorldInfo() {
+    try {
+        console.log('🧪 开始测试世界书...');
+        const result = getActiveWorldInfo();
+        console.log('✅ 测试成功！世界书名称:', result.name);
+        toastr.success('世界书测试成功: ' + result.name);
+        return result;
+    } catch (error) {
+        console.error('❌ 测试失败:', error);
+        toastr.error('世界书测试失败: ' + error.message);
+        return null;
+    }
+}
 // 添加slash命令
 registerSlashCommand(
     'gf_sum',

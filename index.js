@@ -1,5 +1,5 @@
 // TheGhostFace
-// 062625再修不好我就去死好吧
+// 070125
 // 机器人
 
 import {
@@ -676,3 +676,96 @@ async function saveToWorldBook(summaryContent) {
 
     } catch (error) {
         console.error('[ghost] === 世界书保存失败 ===');
+        
+        // 详细错误分析
+        if (error.message.includes('请先在 World Info 页面选择')) {
+            console.error('[ghost] 💡 需要先选择世界书');
+            toastr.error('请先在 World Info 页面选择一个世界书');
+        } else if (error.message.includes('无法加载世界书')) {
+            console.error('[ghost] 💡 世界书加载失败');
+            toastr.error('无法加载世界书数据，请检查世界书是否存在');
+        } else if (error.message.includes('UID')) {
+            console.error('[ghost] 💡 UID分配失败');
+            toastr.error('世界书条目创建失败，请检查世界书状态');
+        } else {
+            console.error('[ghost] 💡 未知世界书错误');
+            toastr.error('世界书保存失败: ' + error.message);
+        }
+        
+        throw error;
+    }
+}
+
+// 辅助函数：检查世界书是否可用
+function checkWorldBookAvailable() {
+    const worldSelect = document.querySelector('#world_editor_select');
+    if (!worldSelect || !worldSelect.value) {
+        return false;
+    }
+    return true;
+}
+
+// 函数定义getActiveWorldInfo
+function getActiveWorldInfo() {
+    console.log('[ghost] 检查当前世界书状态...');
+    
+    // 先调试一下
+    const debugInfo = debugWorldInfo();
+    
+    if (!world_info) {
+        console.error('[ghost] world_info 未定义或为 null');
+        toastr.error(`⚠️ 世界书未加载，请先在 World Info 页面创建或加载一个世界书文件`);
+        throw new Error('世界书未加载，请先创建或加载一个世界书文件');
+    }
+    
+    // 🔥 关键修复：检查多种可能的名称属性
+    const worldName = world_info.name || 
+                     world_info.filename || 
+                     world_info.title || 
+                     world_info.worldInfoName || 
+                     'DefaultWorldInfo';
+    
+    if (!worldName || worldName === 'DefaultWorldInfo') {
+        console.warn('[ghost] 世界书名称为空，使用默认名称');
+        // 不抛出错误，继续执行
+        world_info.name = 'GhostFace_WorldBook_' + Date.now();
+        console.log('[ghost] 设置临时名称:', world_info.name);
+    } else {
+        world_info.name = worldName; // 确保 name 属性存在
+    }
+    
+    // 确保 entries 数组存在
+    if (!Array.isArray(world_info.entries)) {
+        console.warn('[ghost] world_info.entries 不是数组，正在初始化...');
+        world_info.entries = [];
+    }
+    
+    console.log(`[ghost] ✅ 世界书准备就绪: "${world_info.name}", 条目数: ${world_info.entries.length}`);
+    return world_info;
+}
+
+// 🚀 快速测试函数
+function testWorldInfo() {
+    try {
+        console.log('🧪 开始测试世界书...');
+        const result = getActiveWorldInfo();
+        console.log('✅ 测试成功！世界书名称:', result.name);
+        toastr.success('世界书测试成功: ' + result.name);
+        return result;
+    } catch (error) {
+        console.error('❌ 测试失败:', error);
+        toastr.error('世界书测试失败: ' + error.message);
+        return null;
+    }
+}
+// 添加slash命令
+registerSlashCommand(
+    'gf_sum',
+    async () => {
+        await stealthSummarize();
+    },
+    [],
+    '对鬼面发起决斗邀请',
+    true,
+    true
+);

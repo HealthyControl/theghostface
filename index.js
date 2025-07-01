@@ -52,6 +52,187 @@ const MODULE_NAME = 'the_ghost_face'; // 必须全小写或者下划线
 const MODULE_NAME_FANCY = '鬼面'; //支持多语言显示
 const PROGRESS_BAR_ID = `${MODULE_NAME}_progress_bar`;
 
+// 🎯 UI反馈系统
+class GhostUIFeedback {
+    constructor() {
+        this.currentNotification = null;
+        this.progressSteps = [];
+        this.currentStep = 0;
+    }
+
+    // 显示进度条和状态
+    showProgress(steps) {
+        this.progressSteps = steps;
+        this.currentStep = 0;
+        
+        // 创建进度显示区域
+        this.createProgressUI();
+        this.updateProgress();
+    }
+
+    createProgressUI() {
+        // 移除旧的进度条
+        const oldProgress = document.getElementById('ghost-progress-container');
+        if (oldProgress) {
+            oldProgress.remove();
+        }
+
+        // 创建新的进度容器
+        const progressHTML = `
+            <div id="ghost-progress-container" style="
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 15px;
+                border-radius: 10px;
+                z-index: 10000;
+                min-width: 300px;
+                border: 2px solid #666;
+                font-family: monospace;
+            ">
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 18px; margin-right: 8px;">👻</span>
+                    <span style="font-weight: bold;">鬼面工作中...</span>
+                </div>
+                <div id="ghost-progress-bar" style="
+                    background: #333;
+                    height: 8px;
+                    border-radius: 4px;
+                    margin-bottom: 10px;
+                    overflow: hidden;
+                ">
+                    <div id="ghost-progress-fill" style="
+                        background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+                        height: 100%;
+                        width: 0%;
+                        transition: width 0.3s ease;
+                        border-radius: 4px;
+                    "></div>
+                </div>
+                <div id="ghost-current-step" style="
+                    font-size: 12px;
+                    color: #ccc;
+                ">准备开始...</div>
+                <div id="ghost-step-details" style="
+                    font-size: 11px;
+                    color: #999;
+                    margin-top: 5px;
+                    max-height: 60px;
+                    overflow-y: auto;
+                "></div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', progressHTML);
+    }
+
+    updateProgress(stepInfo = null) {
+        const progressFill = document.getElementById('ghost-progress-fill');
+        const currentStepEl = document.getElementById('ghost-current-step');
+        const stepDetailsEl = document.getElementById('ghost-step-details');
+
+        if (!progressFill || !currentStepEl) return;
+
+        // 更新进度条
+        const progress = (this.currentStep / this.progressSteps.length) * 100;
+        progressFill.style.width = `${progress}%`;
+
+        // 更新当前步骤信息
+        if (stepInfo) {
+            currentStepEl.textContent = `${this.currentStep}/${this.progressSteps.length} - ${stepInfo.title}`;
+            if (stepInfo.details) {
+                stepDetailsEl.textContent = stepInfo.details;
+            }
+        } else if (this.currentStep < this.progressSteps.length) {
+            currentStepEl.textContent = `${this.currentStep}/${this.progressSteps.length} - ${this.progressSteps[this.currentStep]}`;
+        }
+    }
+
+    nextStep(stepInfo = null) {
+        this.currentStep++;
+        this.updateProgress(stepInfo);
+    }
+
+    // 显示成功消息
+    showSuccess(message, details = null) {
+        this.hideProgress();
+        toastr.success(message, null, {
+            timeOut: 5000,
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-top-right"
+        });
+        
+        if (details) {
+            console.log('[ghost] 成功详情:', details);
+        }
+    }
+
+    // 显示错误消息
+    showError(message, error = null) {
+        this.hideProgress();
+        toastr.error(message, null, {
+            timeOut: 8000,
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-top-right"
+        });
+        
+        if (error) {
+            console.error('[ghost] 错误详情:', error);
+            // 在聊天区域也显示错误详情
+            this.showChatMessage(`❌ 鬼面遇到问题: ${message}`, 'system');
+        }
+    }
+
+    // 显示警告消息
+    showWarning(message) {
+        toastr.warning(message, null, {
+            timeOut: 6000,
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-top-right"
+        });
+    }
+
+    // 在聊天区域显示消息
+    showChatMessage(content, type = 'system') {
+        const chatContainer = document.querySelector('#chat');
+        if (!chatContainer) return;
+
+        const messageHTML = `
+            <div class="mes" data-source="ghost-plugin" style="
+                background: ${type === 'system' ? 'rgba(100, 100, 100, 0.1)' : 'rgba(0, 100, 200, 0.1)'};
+                border-left: 3px solid ${type === 'system' ? '#666' : '#0066cc'};
+                margin: 5px 0;
+                padding: 10px;
+                border-radius: 5px;
+            ">
+                <div class="mes_block">
+                    <div class="mes_text" style="color: ${type === 'system' ? '#888' : '#333'};">
+                        <span style="font-weight: bold; margin-right: 8px;">👻 鬼面:</span>
+                        ${content}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        chatContainer.insertAdjacentHTML('beforeend', messageHTML);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    hideProgress() {
+        const progressContainer = document.getElementById('ghost-progress-container');
+        if (progressContainer) {
+            progressContainer.remove();
+        }
+    }
+}
+
+// 创建全局UI反馈实例
+const ui = new GhostUIFeedback();
 
 // ✨ 工具函数：统一获取消息数组
 /**
@@ -244,7 +425,6 @@ ${contextText}
     }
 }
 
-
 // 给处理过的消息打标签，目前不知道咋测试这个函数生不生效
 function markMessagesSummarized(messages) {
     if (!Array.isArray(messages)) {
@@ -298,86 +478,7 @@ function parseModelOutput(rawOutput) {
     }
 }
 
-// 偷偷蹲起来尾随
-async function stealthSummarize(isInitial = false) {
-    console.log('[ghost] === 开始 stealthSummarize 流程 ===');
-    console.log('[ghost] 参数: isInitial =', isInitial);
-    
-    const notification = toastr.info("👻 鬼面尾随中...", null, {
-        timeOut: 0,
-        closeButton: false,
-        progressBar: false,
-        hideDuration: 0,
-        positionClass: "toast-bottom-left"
-    });
-
-    try {
-        // 第1步: 收集消息
-        console.log('[ghost] 第1步: 开始收集消息...');
-        const messages = await getGhostContextMessages(isInitial);
-        
-        if (!messages || messages.length === 0) {
-            console.warn('[ghost] ⚠️ 没有找到可总结的消息');
-            toastr.warning("没有找到可总结的消息，鬼面愤怒拔线了...");
-            return;
-        }
-
-        console.log(`[ghost] 第1步完成: 收集到 ${messages.length} 条消息`);
-
-        // 第2步: 生成总结
-        console.log('[ghost] 第2步: 开始生成总结...');
-        const summaryContent = await generateSummary(messages);
-        
-        if (!summaryContent?.trim()) {
-            console.warn('[ghost] ⚠️ AI生成的总结为空');
-            toastr.warning("总结失败或为空，鬼面被板子砸到叹气...");
-            return;
-        }
-
-        console.log(`[ghost] 第2步完成: 总结长度 ${summaryContent.length} 字符`);
-        console.log('[ghost] 总结内容预览:', summaryContent.slice(0, 100) + '...');
-
-        // 第3步: 保存到世界书
-        console.log('[ghost] 第3步: 开始保存到世界书...');
-        await saveToWorldBook(summaryContent);
-        console.log('[ghost] 第3步完成: 已保存到世界书');
-
-        // 第4步: 标记消息
-        console.log('[ghost] 第4步: 标记消息为已处理...');
-        markMessagesSummarized(messages);
-        console.log('[ghost] 第4步完成: 已标记消息');
-
-        // 成功完成
-        toastr.success("👻 鬼面把你吸红了！信息已记录");
-        console.log('[ghost] === stealthSummarize 流程成功完成 ===');
-
-    } catch (err) {
-        console.error('[ghost] === stealthSummarize 流程失败 ===');
-        console.error('[ghost] 错误详情:', {
-            name: err.name,
-            message: err.message,
-            stack: err.stack
-        });
-        
-        toastr.error("尾随被看破: " + err.message);
-        
-        // 根据错误类型给出具体提示
-        if (err.message.includes('超时')) {
-            console.error('[ghost] 💡 建议: 减少消息数量或优化提示词长度');
-        } else if (err.message.includes('generateQuietPrompt')) {
-            console.error('[ghost] 💡 建议: 检查SillyTavern版本是否支持该API');
-        } else if (err.message.includes('世界书')) {
-            console.error('[ghost] 💡 建议: 检查世界书是否正确加载');
-        }
-        
-    } finally {
-        toastr.remove(notification);
-        console.log('[ghost] === stealthSummarize 流程结束 ===');
-    }
-}
-
-//把模型生成的总结信息保存到世界书
-// 🤬再修，这狗阉的世界书我阉割你的爹
+// 🔥 关键修复：智能合并世界书条目，避免重复创建
 async function saveToWorldBook(summaryContent) {
     console.log('[ghost] === 开始保存到世界书 ===');
     console.log('[ghost] 总结内容长度:', summaryContent.length);
@@ -391,6 +492,10 @@ async function saveToWorldBook(summaryContent) {
         
         const worldBookName = worldSelect.selectedOptions[0].textContent;
         console.log('[ghost] 当前世界书:', worldBookName);
+        ui.nextStep({
+            title: '加载世界书',
+            details: `正在加载世界书: ${worldBookName}`
+        });
         
         // 2. 加载世界书数据
         const worldBookData = await loadWorldInfo(worldBookName);
@@ -402,6 +507,11 @@ async function saveToWorldBook(summaryContent) {
         
         // 3. 解析总结内容
         console.log('[ghost] 开始解析总结内容...');
+        ui.nextStep({
+            title: '解析总结内容',
+            details: '正在分析新生成的故事信息...'
+        });
+        
         const summaryLines = summaryContent.split('\n').filter(line => line.trim());
         console.log('[ghost] 解析到', summaryLines.length, '行内容');
         
@@ -429,60 +539,114 @@ async function saveToWorldBook(summaryContent) {
             throw new Error('没有找到有效的分类数据');
         }
 
-        // 4. 创建世界书条目
-        let successCount = 0;
+        // 4. 🔥 智能合并：检查现有条目，避免重复创建
+        console.log('[ghost] 开始智能合并条目...');
+        ui.nextStep({
+            title: '智能合并条目',
+            details: '正在检查现有条目，避免重复创建...'
+        });
+
+        const existingEntries = worldBookData.entries || {};
+        const GHOST_COMMENT_PREFIX = '我们的故事 - ';
+        
+        let mergeCount = 0;
+        let createCount = 0;
+        
         for (const [category, items] of Object.entries(categorizedData)) {
-            console.log(`[ghost] 创建类别"${category}"的条目，包含${items.length}个项目`);
+            console.log(`[ghost] 处理类别"${category}"，包含${items.length}个项目`);
             
-            try {
-                // 第一个参数是 uid（null表示自动生成），第二个参数是世界书数据
-                const newEntry = createWorldInfoEntry(null, worldBookData);
-                
-                if (!newEntry) {
-                    console.error('[ghost] createWorldInfoEntry 返回 null');
-                    continue;
+            const targetComment = GHOST_COMMENT_PREFIX + category;
+            
+            // 查找现有的同类别条目
+            let existingEntry = null;
+            for (const [uid, entry] of Object.entries(existingEntries)) {
+                if (entry.comment === targetComment) {
+                    existingEntry = entry;
+                    console.log(`[ghost] 找到现有条目: ${targetComment}, UID: ${uid}`);
+                    break;
                 }
+            }
+            
+            const newContent = items.join('\n');
+            
+            if (existingEntry) {
+                // 合并到现有条目
+                console.log(`[ghost] 合并到现有条目: ${targetComment}`);
                 
-                console.log('[ghost] 条目创建成功，UID:', newEntry.uid);
+                // 检查内容重复
+                const existingLines = (existingEntry.content || '').split('\n').filter(l => l.trim());
+                const newLines = newContent.split('\n').filter(l => l.trim());
                 
-                // 设置条目属性
-                const entryContent = items.join('\n');
-                const entryComment = `我们的故事 - ${category}`;
-                
-                console.log('[ghost] 设置条目属性...');
-                Object.assign(newEntry, {
-                    comment: entryComment,
-                    content: entryContent,
-                    key: [],
-                    constant: true, // 常驻条目
-                    selective: false, 
-                    selectiveLogic: false, 
-                    addMemo: false, 
-                    order: 100, 
-                    position: 0, 
-                    disable: false, 
-                    excludeRecursion: false,
-                    preventRecursion: false,
-                    delayUntilRecursion: false,
-                    probability: 100, 
-                    useProbability: false 
+                // 去重合并
+                const allLines = [...existingLines];
+                newLines.forEach(newLine => {
+                    if (!allLines.find(existing => 
+                        existing.trim().toLowerCase() === newLine.trim().toLowerCase())) {
+                        allLines.push(newLine);
+                    }
                 });
                 
-                console.log(`[ghost] 条目"${entryComment}"配置完成`);
-                successCount++;
+                existingEntry.content = allLines.join('\n');
+                mergeCount++;
                 
-            } catch (entryError) {
-                console.error(`[ghost] 创建条目"${category}"失败:`, entryError);
-                continue;
+                console.log(`[ghost] 合并完成，条目总行数: ${allLines.length}`);
+                
+            } else {
+                // 创建新条目
+                console.log(`[ghost] 创建新条目: ${targetComment}`);
+                
+                try {
+                    const newEntry = createWorldInfoEntry(null, worldBookData);
+                    
+                    if (!newEntry) {
+                        console.error('[ghost] createWorldInfoEntry 返回 null');
+                        continue;
+                    }
+                    
+                    console.log('[ghost] 条目创建成功，UID:', newEntry.uid);
+                    
+                    // 设置条目属性
+                    Object.assign(newEntry, {
+                        comment: targetComment,
+                        content: newContent,
+                        key: [],
+                        constant: true, // 常驻条目
+                        selective: false, 
+                        selectiveLogic: false, 
+                        addMemo: false, 
+                        order: 100, 
+                        position: 0, 
+                        disable: false, 
+                        excludeRecursion: false,
+                        preventRecursion: false,
+                        delayUntilRecursion: false,
+                        probability: 100, 
+                        useProbability: false 
+                    });
+                    
+                    createCount++;
+                    console.log(`[ghost] 新条目"${targetComment}"配置完成`);
+                    
+                } catch (entryError) {
+                    console.error(`[ghost] 创建条目"${category}"失败:`, entryError);
+                    continue;
+                }
             }
         }
         
-        if (successCount === 0) {
-            throw new Error('所有条目创建均失败');
+        console.log(`[ghost] 条目处理完成 - 新建: ${createCount}, 合并: ${mergeCount}`);
+        
+        if (createCount === 0 && mergeCount === 0) {
+            throw new Error('所有条目处理均失败');
         }
 
         // 5. 保存世界书
         console.log('[ghost] 开始保存世界书...');
+        ui.nextStep({
+            title: '保存世界书',
+            details: '正在将更新写入世界书文件...'
+        });
+        
         console.log('[ghost] 保存参数:', {
             name: worldBookName,
             entriesCount: Object.keys(worldBookData.entries).length,
@@ -501,103 +665,14 @@ async function saveToWorldBook(summaryContent) {
         }
 
         // 7. 成功提示
-        const message = `👻 鬼面已将 ${successCount}/${categoryCount} 类信息存入世界书 "${worldBookName}"`;
-        toastr.success(message);
-        console.log(`[ghost] === 世界书保存完成 === 成功: ${successCount}, 失败: ${categoryCount - successCount}`);
+        const totalProcessed = createCount + mergeCount;
+        const successMessage = `👻 鬼面完成！新建 ${createCount} 个条目，合并 ${mergeCount} 个条目`;
+        const detailsMessage = `世界书 "${worldBookName}" 已更新，共处理 ${totalProcessed}/${categoryCount} 类信息`;
+        
+        ui.showSuccess(successMessage, detailsMessage);
+        ui.showChatMessage(`${successMessage}\n📚 ${detailsMessage}`, 'system');
+        
+        console.log(`[ghost] === 世界书保存完成 === 新建: ${createCount}, 合并: ${mergeCount}, 失败: ${categoryCount - totalProcessed}`);
 
     } catch (error) {
         console.error('[ghost] === 世界书保存失败 ===');
-        console.error('[ghost] 错误详情:', error);
-        
-        // 详细错误分析
-        if (error.message.includes('请先在 World Info 页面选择')) {
-            console.error('[ghost] 💡 需要先选择世界书');
-            toastr.error('请先在 World Info 页面选择一个世界书');
-        } else if (error.message.includes('无法加载世界书')) {
-            console.error('[ghost] 💡 世界书加载失败');
-            toastr.error('无法加载世界书数据，请检查世界书是否存在');
-        } else if (error.message.includes('UID')) {
-            console.error('[ghost] 💡 UID分配失败');
-            toastr.error('世界书条目创建失败，请检查世界书状态');
-        } else {
-            console.error('[ghost] 💡 未知世界书错误');
-            toastr.error('世界书保存失败: ' + error.message);
-        }
-        
-        throw error;
-    }
-}
-
-// 辅助函数：检查世界书是否可用
-function checkWorldBookAvailable() {
-    const worldSelect = document.querySelector('#world_editor_select');
-    if (!worldSelect || !worldSelect.value) {
-        return false;
-    }
-    return true;
-}
-
-// 函数定义getActiveWorldInfo
-function getActiveWorldInfo() {
-    console.log('[ghost] 检查当前世界书状态...');
-    
-    // 先调试一下
-    const debugInfo = debugWorldInfo();
-    
-    if (!world_info) {
-        console.error('[ghost] world_info 未定义或为 null');
-        toastr.error(`⚠️ 世界书未加载，请先在 World Info 页面创建或加载一个世界书文件`);
-        throw new Error('世界书未加载，请先创建或加载一个世界书文件');
-    }
-    
-    // 🔥 关键修复：检查多种可能的名称属性
-    const worldName = world_info.name || 
-                     world_info.filename || 
-                     world_info.title || 
-                     world_info.worldInfoName || 
-                     'DefaultWorldInfo';
-    
-    if (!worldName || worldName === 'DefaultWorldInfo') {
-        console.warn('[ghost] 世界书名称为空，使用默认名称');
-        // 不抛出错误，继续执行
-        world_info.name = 'GhostFace_WorldBook_' + Date.now();
-        console.log('[ghost] 设置临时名称:', world_info.name);
-    } else {
-        world_info.name = worldName; // 确保 name 属性存在
-    }
-    
-    // 确保 entries 数组存在
-    if (!Array.isArray(world_info.entries)) {
-        console.warn('[ghost] world_info.entries 不是数组，正在初始化...');
-        world_info.entries = [];
-    }
-    
-    console.log(`[ghost] ✅ 世界书准备就绪: "${world_info.name}", 条目数: ${world_info.entries.length}`);
-    return world_info;
-}
-
-// 🚀 快速测试函数
-function testWorldInfo() {
-    try {
-        console.log('🧪 开始测试世界书...');
-        const result = getActiveWorldInfo();
-        console.log('✅ 测试成功！世界书名称:', result.name);
-        toastr.success('世界书测试成功: ' + result.name);
-        return result;
-    } catch (error) {
-        console.error('❌ 测试失败:', error);
-        toastr.error('世界书测试失败: ' + error.message);
-        return null;
-    }
-}
-// 添加slash命令
-registerSlashCommand(
-    'gf_sum',
-    async () => {
-        await stealthSummarize();
-    },
-    [],
-    '对鬼面发起决斗邀请',
-    true,
-    true
-);

@@ -1,0 +1,96 @@
+<div id="the_ghost_face_control_panel">
+      <!-- 控制面板 -->
+      <div id="the_ghost_face_control_panel_content" style="
+      position: absolute; top: 60px; right: 0; width: 320px; max-height: 500px; transform: translateY(-10px) scale(0.95); opacity: 0; visibility: hidden; overflow: hidden;"
+      class="ghost-theme-responsive"> 
+
+        <!-- 头部 -->
+        <div id="the_ghost_face_control_panel_header" style="...">
+         <h3 style="margin: 0; font-size: 18px; font-weight: 600;">
+            👻 鬼面控制台
+         </h3>
+        </div>
+
+
+     <!-- 可滚动的主体内容 -->
+     <div class="ghost-panel-body">
+    <!-- 主要功能按钮区 - 2x2网格 -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <button id="the_ghost_face_control_panel_manual_summary" class="ghost-button">
+            🐱 手动总结
+        </button>
+        
+        <button id="the_ghost_face_control_panel_toggle_auto" 
+                class="ghost-button ghost-auto-toggle" 
+                data-auto-enabled="true">
+            🐕 自动开启
+        </button>
+        
+        <button id="the_ghost_face_control_panel_reset_flags" class="ghost-button ghost-reset-button">
+            🔄 重置标记
+        </button>
+        
+        <button id="the_ghost_face_control_panel_settings_toggle" class="ghost-button ghost-settings-button">
+            ⚙️ 设置菜单
+        </button>
+    </div>
+
+    <!-- 可折叠的设置区域 -->
+    <div id="the_ghost_face_control_panel_settings_area" style="display: none; margin-bottom: 20px;">
+        <!-- 主题选择 -->
+        <div style="margin-bottom: 15px;">
+            <label style="color: #ccc; font-size: 12px; margin-bottom: 8px; display: block;">
+                🎨 主题配色
+            </label>
+            <select id="the_ghost_face_control_panel_theme_select" class="ghost-select">
+                <option value="classic" selected>经典紫魔</option>
+                <option value="ocean">深海蓝调</option>
+                <option value="sunset">夕阳暖橙</option>
+                <option value="forest">森林绿意</option>
+                <option value="rose">玫瑰粉梦</option>
+            </select>
+        </div>
+
+        <!-- 触发设置 -->
+        <div style="margin-bottom: 15px;">
+            <label style="color: #ccc; font-size: 12px; margin-bottom: 8px; display: block;">
+                ⚙️ 触发设置
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                <div>
+                    <label style="color: #aaa; font-size: 10px;">消息阈值</label>
+                    <input id="the_ghost_face_control_panel_threshold_input" type="number" 
+                           min="10" max="100" value="40" class="ghost-input">
+                </div>
+                <div>
+                    <label style="color: #aaa; font-size: 10px;">检测间隔(分)</label>
+                    <input id="the_ghost_face_control_panel_interval_input" type="number" 
+                           min="1" max="60" value="5" class="ghost-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- 隐藏消息选项 -->
+
+    <!-- 状态信息 -->
+    <div class="ghost-status-card">
+        <div class="ghost-status-info">
+            <div>📊 消息数: <span id="the_ghost_face_control_panel_message_count">0</span></div>
+            <div>🎯 阈值: <span id="the_ghost_face_control_panel_threshold_display">40</span> 条</div>
+            <div>⚡ 状态: <span id="the_ghost_face_control_panel_status_text">自动尾随中</span></div>
+        </div>
+    </div>
+</div>
+
+        <!-- 日志区域 -->
+             <div class="ghost-log-section">
+        <div class="ghost-log-header">
+            <span class="ghost-log-title">📋 受害者的详细行程</span>
+            <button id="the_ghost_face_control_panel_clear_log" class="ghost-log-clear">清空</button>
+        </div>
+        <div id="the_ghost_face_control_panel_log_content">
+            <div style="color: #888; font-style: italic;">等待受害者的详细行程...</div>
+           </div>
+        </div>
+    </div>
+</div> 

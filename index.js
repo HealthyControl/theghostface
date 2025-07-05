@@ -1,5 +1,5 @@
-// TheGhostFace - 修复版本 - 解决重复条目和自动触发问题
-// 070424hiking前改的好吗？？
+// TheGhostFace - v2.1
+// 070425 0920
 // 机器人
 
 import {
@@ -41,7 +41,7 @@ import { dragElement } from '../../../RossAscends-mods.js';
 import { debounce_timeout } from '../../../constants.js';
 import { MacrosParser } from '../../../macros.js';
 import { commonEnumProviders } from '../../../slash-commands/SlashCommandCommonEnumsProvider.js';
-import { executeSlashCommands, registerSlashCommand } from '../../../slash-commands.js';
+/* import { executeSlashCommands, registerSlashCommand } from '../../../slash-commands.js'; */
 import { getRegexScripts } from '../../../../scripts/extensions/regex/index.js';
 import { runRegexScript } from '../../../../scripts/extensions/regex/engine.js';
 
@@ -52,7 +52,279 @@ const MODULE_NAME = 'the_ghost_face';
 const MODULE_NAME_FANCY = '鬼面';
 const PROGRESS_BAR_ID = `${MODULE_NAME}_progress_bar`;
 
-// 🔧 新增：预定义的固定类别
+// 主题配置
+const THEME_CONFIGS = {
+    classic: { name: '经典紫魔' },
+    ocean: { name: '深海蓝调' },
+    sunset: { name: '夕阳暖橙' },
+    forest: { name: '森林绿意' },
+    rose: { name: '玫瑰粉梦' }
+};
+
+// 当前主题
+let currentTheme = 'classic';
+
+function get_extension_directory() {
+    // get the directory of the extension
+    let index_path = new URL(import.meta.url).pathname
+    return index_path.substring(0, index_path.lastIndexOf('/'))  // remove the /index.js from the path
+}
+let userThreshold = 40;
+let userInterval = 10;
+let intervalId = null;
+
+let keepMessagesCount = 2;
+
+// 加载函数
+async function loadGhostStyles() {
+    const module_dir = get_extension_directory();
+    
+    // 避免重复加载
+    if (document.querySelector('#ghost-face-styles')) {
+        return true;
+    }
+
+    const link = document.createElement('link');
+    link.id = 'ghost-face-styles';
+    link.rel = 'stylesheet';
+    link.href = `${module_dir}/ghostpanel.css`;
+    
+    return new Promise((resolve) => {
+        link.onload = () => resolve(true);
+        link.onerror = () => {
+            addFallbackStyles();
+            resolve(false); // 返回加载失败状态
+        };
+        document.head.appendChild(link);
+    });
+}
+
+// 🎨 应用主题到HTML根元素
+function applyThemeToDocument(themeName) {
+    if (!THEME_CONFIGS[themeName]) return;
+    document.documentElement.setAttribute('data-ghost-theme', themeName);
+    const panel = document.getElementById('the_ghost_face_control_panel');
+    if (panel) panel.setAttribute('data-ghost-theme', themeName);
+}
+
+// 🎨 更新主题
+function updatePanelTheme(themeName) {
+    if (!THEME_CONFIGS[themeName]) return;
+    currentTheme = themeName;
+    applyThemeToDocument(themeName);
+    const themeSelect = document.getElementById(`${PANEL_ID}_theme_select`);
+    if (themeSelect) {
+        themeSelect.value = themeName;
+    }
+    // 更新状态指示器（如果需要动态颜色）
+    updateAutoStatus();
+}
+
+// 添加到扩展菜单
+function addGhostMenuItem() {
+    const extensionsMenu = document.querySelector('#extensionsMenu');
+    if (!extensionsMenu) {
+        setTimeout(addGhostMenuItem, 2000);
+        return false;
+    }
+    
+    // 检查是否已存在
+    let existingItem = document.querySelector('#ghost_face_menu_item');
+    if (existingItem) {
+        existingItem.remove();
+    }
+    
+    // 创建菜单项容器
+    const menuItemContainer = document.createElement('div');
+    menuItemContainer.className = 'extension_container interactable';
+    menuItemContainer.id = 'ghost_face_menu_container';
+    menuItemContainer.tabIndex = 0;
+    
+    // 创建菜单项
+    const menuItem = document.createElement('div');
+    menuItem.className = 'list-group-item flex-container flexGap5 interactable';
+    menuItem.id = 'ghost_face_menu_item';
+    menuItem.title = '打开鬼面控制台';
+    menuItem.innerHTML = `
+        <div class="fa-fw extensionsMenuExtensionButton">👻</div>
+        <span>对鬼面发出决斗邀请</span>
+    `;
+    
+    // 添加点击事件
+    menuItem.addEventListener('click', async (event) => {
+        event.stopPropagation();
+
+        // 关闭扩展菜单
+        const extensionsMenuButton = document.querySelector('#extensionsMenuButton');
+        if (extensionsMenuButton && extensionsMenu.style.display !== 'none') {
+            extensionsMenuButton.click();
+            await new Promise(resolve => setTimeout(resolve, 150));
+        }
+        
+        // 打开控制面板
+        openPanel();
+    });
+    
+    menuItemContainer.appendChild(menuItem);
+    extensionsMenu.appendChild(menuItemContainer);
+    
+    logger.info('👻 鬼面菜单项已添加到扩展菜单');
+    return true;
+}
+
+// 控制面板创建函数
+async function createGhostControlPanel() {
+    const existingPanel = document.getElementById(PANEL_ID);
+    if (existingPanel) {
+        existingPanel.remove();
+    }
+
+    try {
+        // 首先加载CSS
+        await loadGhostStyles();
+        
+        // 然后加载HTML
+        const module_dir = get_extension_directory();
+        const response = await fetch(`${module_dir}/ghostpanel.html`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const html = await response.text();
+        
+        if (!html.trim()) {
+            throw new Error('HTML文件为空');
+        }
+        
+        document.body.insertAdjacentHTML('beforeend', html);
+        applyThemeToDocument(currentTheme);
+        
+        // 设置事件和更新数据
+        setupPanelEvents();
+        updatePanelWithCurrentData();
+        updateMessageCount();
+        
+        logger.info("👻 Ghost panel loaded successfully!");
+        
+    } catch (error) {
+        logger.error("❌ Failed to load ghost panel:", error);
+    }
+       // 确保面板已添加到 DOM 后
+    setTimeout(() => {
+        const themeSelect = document.getElementById('the_ghost_face_control_panel_theme_select');
+        if (themeSelect) {
+            themeSelect.value = currentTheme;
+        }
+    }, 0);
+
+    setTimeout(() => {
+    loadUserSettings(); // 加载保存的设置
+}, 100);
+}
+
+
+// 更新自动状态 
+function updateAutoStatus() {
+    const statusDot = document.getElementById(`${PANEL_ID}_status`);
+    const statusText = document.getElementById(`${PANEL_ID}_status_text`);
+    const toggleButton = document.getElementById(`${PANEL_ID}_toggle_auto`);
+    
+    // 通过CSS类控制样式
+    if (statusDot) {
+        statusDot.className = autoTriggerEnabled ? 'status-enabled' : 'status-disabled';
+    }
+    
+    if (toggleButton) {
+        if (autoTriggerEnabled) {
+            toggleButton.classList.remove('auto-disabled');
+        } else {
+            toggleButton.classList.add('auto-disabled');
+        }
+        // 如果使用CSS content，就不需要设置textContent
+        // toggleButton.textContent = ''; // CSS会自动处理
+    }
+    
+    // 只有动态文字内容需要在JS中设置
+    if (statusText) {
+        statusText.textContent = autoTriggerEnabled ? '自动尾随中' : '手动模式';
+        statusText.className = autoTriggerEnabled ? 'status-enabled' : 'status-disabled';
+    }
+}
+
+// 切换主题
+function changeTheme(themeName) {
+    if (!THEME_CONFIGS[themeName]) return;
+    currentTheme = themeName;
+     extension_settings.the_ghost_face = extension_settings.the_ghost_face || {};
+    extension_settings.the_ghost_face.theme = themeName;
+    saveSettingsDebounced(); 
+    document.documentElement.setAttribute('data-ghost-theme', themeName);
+    document.getElementById('the_ghost_face_control_panel')?.setAttribute('data-ghost-theme', themeName);
+     const themeSelect = document.getElementById('the_ghost_face_control_panel_theme_select');
+    if (themeSelect) themeSelect.value = themeName;
+    }
+
+
+// 加载用户设置
+function loadUserSettings() {
+    const settings = extension_settings.the_ghost_face || {};
+    userThreshold = settings.threshold || 40;
+    userInterval = settings.interval || 30;
+    keepMessagesCount = settings.keepMessages || 2;
+    autoTriggerEnabled = settings.autoEnabled !== undefined ? settings.autoEnabled : false; 
+
+    const autoBtn = document.getElementById(`${PANEL_ID}_toggle_auto`);
+    if (autoBtn) {
+        autoBtn.dataset.autoEnabled = autoTriggerEnabled;
+        autoBtn.textContent = `🐕 自动${autoTriggerEnabled ? '开启' : '关闭'}`;
+    }
+    // 更新输入框显示
+    const thresholdInput = document.getElementById(`${PANEL_ID}_threshold_input`);
+    const intervalInput = document.getElementById(`${PANEL_ID}_interval_input`);
+    const keepMessagesInput = document.getElementById(`${PANEL_ID}_keep_messages_input`);
+    const autoHideCheckbox = document.getElementById(`${PANEL_ID}_auto_hide`);
+    
+    if (thresholdInput) thresholdInput.value = userThreshold;
+    if (intervalInput) intervalInput.value = userInterval;
+    if (keepMessagesInput) keepMessagesInput.value = keepMessagesCount;
+    if (autoHideCheckbox) autoHideCheckbox.checked = settings.autoHide !== undefined ? settings.autoHide : true;
+    
+    // 更新显示
+    updateThresholdDisplay();
+    updateAutoStatus();
+
+    currentTheme = settings.theme || 'classic';
+    updatePanelTheme(currentTheme); // 确保主题被应用
+}
+
+function getAutoHideStatus() {
+    const checkbox = document.getElementById(`${PANEL_ID}_auto_hide`);
+    return checkbox ? checkbox.checked : true;
+}
+
+// 保存用户设置
+function saveUserSettings() {
+    extension_settings.the_ghost_face = extension_settings.the_ghost_face || {};
+    extension_settings.the_ghost_face.threshold = userThreshold;
+    extension_settings.the_ghost_face.interval = userInterval;
+    extension_settings.the_ghost_face.keepMessages = keepMessagesCount;
+    extension_settings.the_ghost_face.autoEnabled = autoTriggerEnabled; 
+    extension_settings.the_ghost_face.autoHide = getAutoHideStatus(); 
+    saveSettingsDebounced();
+    
+    // 保存自动隐藏设置
+    const autoHideCheckbox = document.getElementById(`${PANEL_ID}_auto_hide`);
+    if (autoHideCheckbox) {
+        extension_settings.the_ghost_face.autoHide = autoHideCheckbox.checked;
+    }
+    
+    saveSettingsDebounced();
+    
+    logger.info(`💾 设置已保存: 阈值=${userThreshold}, 间隔=${userInterval}分钟, 保留=${keepMessagesCount}条, 自动=${autoTriggerEnabled}`);
+}
+
+// 🔧 预定义的固定类别
 const PREDEFINED_CATEGORIES = {
     '喜好': {
         comment: '我们的故事 - 喜好偏好',
@@ -86,125 +358,27 @@ const PREDEFINED_CATEGORIES = {
     }
 };
 
-// 🔧 新增：自动触发相关变量
+// 自动触发相关变量
 let lastMessageCount = 0;
 let autoTriggerEnabled = true;
-const AUTO_TRIGGER_THRESHOLD = 40; // 40条新消息触发
-let isAutoSummarizing = false; // 防止重复触发
+const AUTO_TRIGGER_THRESHOLD = 40;
+let isAutoSummarizing = false;
 
-// 日志记录部分 - 修复版本
-const LOG_CONTAINER_ID = `${MODULE_NAME}_log_container`;
-const MAX_LOG_ENTRIES = 50;
+// UI控制变量
+let isPanelOpen = false;
+const PANEL_ID = `${MODULE_NAME}_control_panel`;
+const MAX_LOG_ENTRIES = 100;
 
-// 🔧 修复1: 添加初始化标志，防止递归
-let logSystemInitialized = false;
+// 初始化标志
+let systemInitialized = false;
+let panelReady = false; 
+let pendingLogs = [];
 
-// 创建日志容器 - 防止递归调用
-function createLogContainer() {
-    // 防止重复创建
-    if (logSystemInitialized) {
-        return;
-    }
-    
-    // 如果已存在则先移除
-    const existingContainer = document.getElementById(LOG_CONTAINER_ID);
-    if (existingContainer) {
-        existingContainer.remove();
-    }
-
-    const logHTML = `
-    <div id="${LOG_CONTAINER_ID}" style="
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 400px;
-        max-height: 300px;
-        background: rgba(0, 0, 0, 0.85);
-        color: #eee;
-        border: 1px solid #444;
-        border-radius: 8px;
-        font-family: monospace;
-        font-size: 12px;
-        overflow: hidden;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-    ">
-        <div style="
-            padding: 8px 12px;
-            background: #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #555;
-        ">
-            <strong>👻 受害者的详细进程</strong>
-            <div>
-                <button id="${LOG_CONTAINER_ID}_toggle" style="
-                    background: #555;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 2px 8px;
-                    margin-right: 5px;
-                    cursor: pointer;
-                ">最小化</button>
-                <button id="${LOG_CONTAINER_ID}_clear" style="
-                    background: #555;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 2px 8px;
-                    cursor: pointer;
-                ">清空</button>
-            </div>
-        </div>
-        <div id="${LOG_CONTAINER_ID}_content" style="
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 8px;
-            line-height: 1.4;
-        "></div>
-    </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', logHTML);
-
-    // 添加交互功能
-    const toggleBtn = document.getElementById(`${LOG_CONTAINER_ID}_toggle`);
-    const clearBtn = document.getElementById(`${LOG_CONTAINER_ID}_clear`);
-    
-    if (toggleBtn) toggleBtn.addEventListener('click', toggleLogContainer);
-    if (clearBtn) clearBtn.addEventListener('click', clearLogs);
-    
-    // 🔧 修复2: 标记初始化完成
-    logSystemInitialized = true;
+// 检查面板是否准备就绪
+function isPanelReady() {
+    return document.getElementById(`${PANEL_ID}_log_content`) !== null;
 }
 
-function toggleLogContainer() {
-    const container = document.getElementById(LOG_CONTAINER_ID);
-    const content = document.getElementById(`${LOG_CONTAINER_ID}_content`);
-    const button = document.getElementById(`${LOG_CONTAINER_ID}_toggle`);
-
-    if (content && button) {
-        if (content.style.display === 'none') {
-            content.style.display = 'block';
-            button.textContent = '最小化';
-            if (container) container.style.height = '300px';
-        } else {
-            content.style.display = 'none';
-            button.textContent = '展开';
-            if (container) container.style.height = 'auto';
-        }
-    }
-}
-
-function clearLogs() {
-    const content = document.getElementById(`${LOG_CONTAINER_ID}_content`);
-    if (content) {
-        content.innerHTML = '';
-    }
-}
 
 // 日志级别
 const LOG_LEVEL = {
@@ -214,85 +388,81 @@ const LOG_LEVEL = {
     ERROR: 'error'
 };
 
-// 🔧 修复3: 安全的日志记录函数
+// 日志记录函数
 function logToUI(level, message, details = null) {
-    // 防止在初始化期间的递归调用
-    if (!logSystemInitialized) {
+     if (!systemInitialized) {
         console.log(`[鬼面][初始化期间] ${level}: ${message}`, details);
         return;
     }
 
-    const content = document.getElementById(`${LOG_CONTAINER_ID}_content`);
+    const content = document.getElementById(`${PANEL_ID}_log_content`);
     if (!content) {
         console.log(`[鬼面][容器不存在] ${level}: ${message}`, details);
         return;
     }
 
-    // 限制日志条目数量
+    // 限制日志条目数量 - 但保留更多
     const logs = content.querySelectorAll('.log-entry');
     if (logs.length >= MAX_LOG_ENTRIES) {
-        content.removeChild(logs[0]);
+        // 删除最旧的10条，而不是1条
+        for (let i = 0; i < 10 && logs[i]; i++) {
+            content.removeChild(logs[i]);
+        }
     }
-
     const now = new Date();
     const timeStr = now.toLocaleTimeString();
 
-    let levelClass = '';
+    let levelColor = '';
     let levelText = '';
     switch (level) {
         case LOG_LEVEL.DEBUG:
-            levelClass = 'log-debug';
+            levelColor = THEME_CONFIGS[currentTheme].accent;
             levelText = 'DEBUG';
             console.debug(`[鬼面][${timeStr}] ${message}`, details);
             break;
         case LOG_LEVEL.INFO:
-            levelClass = 'log-info';
+            levelColor = THEME_CONFIGS[currentTheme].secondary;
             levelText = 'INFO';
             console.info(`[鬼面][${timeStr}] ${message}`, details);
             break;
         case LOG_LEVEL.WARN:
-            levelClass = 'log-warn';
+            levelColor = '#ff9800';
             levelText = 'WARN';
             console.warn(`[鬼面][${timeStr}] ${message}`, details);
             break;
         case LOG_LEVEL.ERROR:
-            levelClass = 'log-error';
+            levelColor = '#f44336';
             levelText = 'ERROR';
             console.error(`[鬼面][${timeStr}] ${message}`, details);
             break;
         default:
-            levelClass = 'log-info';
+            levelColor = '#ffffff';
             levelText = 'INFO';
             console.info(`[鬼面][${timeStr}] ${message}`, details);
     }
 
     const logEntry = document.createElement('div');
-    logEntry.className = `log-entry ${levelClass}`;
-    logEntry.style.padding = '4px 0';
-    logEntry.style.borderBottom = '1px solid #333';
-    logEntry.style.wordBreak = 'break-word';
+    logEntry.className = 'log-entry';
+    logEntry.style.cssText = `
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        word-break: break-word;
+        border-left: 3px solid ${levelColor};
+        padding-left: 8px;
+        margin-bottom: 2px;
+    `;
 
     logEntry.innerHTML = `
-        <div style="display: flex; justify-content: space-between;">
-            <span style="color: #aaa;">[${timeStr}]</span>
-            <strong style="color: ${getLevelColor(level)}">${levelText}</strong>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #aaa; font-size: 12px;">[${timeStr}]</span>
+            <strong style="color: ${levelColor}; font-size: 12px;">${levelText}</strong>
         </div>
-        <div>${escapeHtml(message)}</div>
-        ${details ? `<pre style="color: #999; margin: 4px 0 0 0; font-size: 11px; white-space: pre-wrap;">${escapeHtml(JSON.stringify(details, null, 2))}</pre>` : ''}
+        <div style="font-size: 13px; line-height: 1.3;">${escapeHtml(message)}</div>
+        ${details ? `<pre style="color: #999; margin: 4px 0 0 0; font-size: 12px; white-space: pre-wrap;">${escapeHtml(JSON.stringify(details, null, 2))}</pre>` : ''}
     `;
 
     content.appendChild(logEntry);
     content.scrollTop = content.scrollHeight;
-}
-
-function getLevelColor(level) {
-    switch (level) {
-        case LOG_LEVEL.DEBUG: return '#66b3ff';
-        case LOG_LEVEL.INFO: return '#4caf50';
-        case LOG_LEVEL.WARN: return '#ff9800';
-        case LOG_LEVEL.ERROR: return '#f44336';
-        default: return '#ffffff';
-    }
 }
 
 function escapeHtml(unsafe) {
@@ -305,52 +475,13 @@ function escapeHtml(unsafe) {
         .replace(/'/g, "&#039;");
 }
 
-// 🔧 修复4: 安全的日志快捷方法
+// 🔧 安全的日志快捷方法
 const logger = {
     debug: (msg, details) => logToUI(LOG_LEVEL.DEBUG, msg, details),
     info: (msg, details) => logToUI(LOG_LEVEL.INFO, msg, details),
     warn: (msg, details) => logToUI(LOG_LEVEL.WARN, msg, details),
     error: (msg, details) => logToUI(LOG_LEVEL.ERROR, msg, details)
 };
-
-function addLogStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .log-entry {
-            transition: background-color 0.2s;
-        }
-        .log-entry:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-        .log-debug {
-            border-left: 3px solid #66b3ff;
-            padding-left: 5px;
-        }
-        .log-info {
-            border-left: 3px solid #4caf50;
-            padding-left: 5px;
-        }
-        .log-warn {
-            border-left: 3px solid #ff9800;
-            padding-left: 5px;
-        }
-        .log-error {
-            border-left: 3px solid #f44336;
-            padding-left: 5px;
-        }
-        #${LOG_CONTAINER_ID}_content::-webkit-scrollbar {
-            width: 6px;
-        }
-        #${LOG_CONTAINER_ID}_content::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        #${LOG_CONTAINER_ID}_content::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-        }
-    `;
-    document.head.appendChild(style);
-}
 
 // ✨ 工具函数：统一获取消息数组
 function getMessageArray(source) {
@@ -367,7 +498,7 @@ function getMessageArray(source) {
     return [];
 }
 
-// 🔧 新增：自动触发检测函数
+// 🔧 自动触发检测函数
 async function checkAutoTrigger() {
     if (!autoTriggerEnabled || isAutoSummarizing) {
         return;
@@ -378,7 +509,6 @@ async function checkAutoTrigger() {
         const messages = getMessageArray(context);
         const currentCount = messages.length;
 
-        // 计算新消息数量
         const newMessageCount = currentCount - lastMessageCount;
         
         if (lastMessageCount > 0 && newMessageCount >= AUTO_TRIGGER_THRESHOLD) {
@@ -389,14 +519,12 @@ async function checkAutoTrigger() {
                 progressBar: true
             });
             
-            // 标记正在处理，防止重复触发
             isAutoSummarizing = true;
             
-            // 延迟1秒后执行，让用户看到提示
             setTimeout(async () => {
                 try {
                     logger.info('🤖 开始执行自动总结...');
-                    await stealthSummarize(false, true); // 第二个参数表示是自动触发
+                    await stealthSummarize(false, true);
                 } catch (error) {
                     logger.error('🤖 自动总结失败:', error);
                 } finally {
@@ -405,12 +533,37 @@ async function checkAutoTrigger() {
             }, 1000);
         }
 
-        // 更新消息计数
         lastMessageCount = currentCount;
 
     } catch (error) {
         logger.error('🤖 自动触发检测失败:', error);
     }
+}
+
+// 消息监听器设置
+function setupMessageListener() {
+    logger.info('🔧 设置消息监听器...');
+    
+    document.addEventListener('messageAdded', () => {
+        setTimeout(checkAutoTrigger, 1000);
+    });
+    
+    document.addEventListener('chatLoaded', () => {
+        setTimeout(async () => {
+            try {
+                const context = await getContext();
+                const messages = getMessageArray(context);
+                lastMessageCount = messages.length;
+                logger.info(`🔧 聊天加载完成，初始消息数: ${lastMessageCount}`);
+            } catch (error) {
+                logger.error('🔧 初始化消息计数失败:', error);
+            }
+        }, 1000);
+    });
+    
+    setInterval(checkAutoTrigger, 30000);
+    
+    logger.info('🔧 消息监听器设置完成');
 }
 
 // ✨ 收集消息（全量或增量）
@@ -466,7 +619,7 @@ async function generateSummary(messages) {
                     content = '[无内容]';
                 }
                 
-                logger.info(`[ghostface] 消息${index + 1}: ${speaker} (${content.length}字)`);
+                logger.debug(`[ghostface] 消息${index + 1}: ${speaker} (${content.length}字)`);
                 return `${speaker}: ${content}`;
             })
             .join('\n');
@@ -476,12 +629,12 @@ async function generateSummary(messages) {
         const optimized_prompt = `你是一个专业且充满热心的故事总结助手，你很喜欢八卦这对甜蜜的小情侣，请从最近的对话中提取可复用剧情细节，确保未来{{char}}可以使用这些"记忆"随时给{{user}}小惊喜，让{{user}}能感觉到发生过的事情都真的被记住了：
 
 请按照以下6个固定类别进行分类：
-1. 喜好 - 明确的喜欢、偏好、爱好（比如"喜欢雨天"、"爱吃草莓"）
-2. 恐惧 - 害怕、讨厌、不喜欢的事物（比如"害怕蜘蛛"、"讨厌苦瓜"）
-3. 事件 - 发生的重要事情、经历（比如"昨天去了游乐园"、"考试得了满分"）
-4. 关系 - 人际关系、朋友家人（比如"有个叫小明的朋友"、"妈妈很严格"）
-5. 梦境 - 梦见的内容、幻想、想象（比如"梦见变成了猫"、"幻想当超级英雄"）
-6. 互动 - {{char}}与{{user}}的独特互动方式（比如"喜欢摸头"、"会撒娇求抱抱"）
+1. 喜好 - 明确的喜欢、偏好、爱好
+2. 恐惧 - 害怕、讨厌、不喜欢的事物
+3. 事件 - 发生的重要事情、经历
+4. 关系 - 人际关系、朋友家人
+5. 梦境 - 梦见的内容、幻想、想象
+6. 互动 - {{char}}与{{user}}的独特互动方式
 
 输出要求：
 - 每行一个细节，格式：[类别] 具体内容
@@ -501,24 +654,17 @@ ${contextText}
 
         logger.info(`[ghostface] 步骤4: 提示词构建完成，长度: ${optimized_prompt.length} 字符`);
         
-        if (optimized_prompt.length > 8000) {
-            logger.warn(`[ghostface] ⚠️ 提示词过长 (${optimized_prompt.length}字符)，可能导致API调用失败`);
-        }
-
-        logger.info('[ghostface] 步骤5: 获取Context对象...');
         const context = await getContext();
         
         if (!context) {
             throw new Error('getContext() 返回 null/undefined');
         }
         
-        logger.info('[ghostface] 步骤6: Context对象获取成功，类型:', typeof context);
-        
         if (typeof context.generateQuietPrompt !== 'function') {
             throw new Error('context.generateQuietPrompt 不是函数');
         }
 
-        logger.info('[ghostface] 步骤8: 开始调用 generateQuietPrompt...');
+        logger.info('[ghostface] 步骤5: 开始调用 generateQuietPrompt...');
 
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('AI生成超时 (30秒)')), 30000);
@@ -531,10 +677,10 @@ ${contextText}
             "你是一个专业的故事总结助手"
         );
 
-        logger.info('[ghostface] 步骤9: 等待AI响应...');
+        logger.info('[ghostface] 步骤6: 等待AI响应...');
         const result = await Promise.race([generatePromise, timeoutPromise]);
         
-        logger.info('[ghostface] 步骤10: AI生成完成！');
+        logger.info('[ghostface] 步骤7: AI生成完成！');
         logger.info('[ghostface] 原始结果类型:', typeof result);
         logger.info('[ghostface] 原始结果长度:', result ? result.length : 'null');
         
@@ -542,9 +688,9 @@ ${contextText}
             throw new Error('AI返回空结果');
         }
 
-        logger.info('[ghostface] 步骤11: 开始解析模型输出...');
+        logger.info('[ghostface] 步骤8: 开始解析模型输出...');
         const parsedResult = parseModelOutput(result);
-        logger.info('[ghostface] 步骤12: 解析完成，最终结果长度:', parsedResult.length);
+        logger.info('[ghostface] 步骤9: 解析完成，最终结果长度:', parsedResult.length);
         logger.info('[ghostface] === generateSummary 成功完成 ===');
         
         return parsedResult;
@@ -557,19 +703,145 @@ ${contextText}
     }
 }
 
-function markMessagesSummarized(messages) {
-    if (!Array.isArray(messages)) {
-        logger.warn('[ghostface] markMessagesSummarized: 输入不是数组');
+// 生成消息唯一标识
+function generateMessageId(msg, index) {
+    const content = msg.mes || msg.text || msg.content || '';
+    const timestamp = msg.send_date || msg.timestamp || Date.now();
+    return `${index}_${getStringHash(content)}_${timestamp}`;
+}
+
+// 查找消息元素
+function findMessageElement(msg, index) {
+    const messageElements = document.querySelectorAll('.mes');
+    
+    // 方法1：通过索引查找
+    if (messageElements[index]) {
+        return messageElements[index];
+    }
+    
+    // 方法2：通过消息内容匹配
+    const content = msg.mes || msg.text || msg.content || '';
+    for (let element of messageElements) {
+        const elementText = element.querySelector('.mes_text')?.textContent || '';
+        if (elementText.includes(content.substring(0, 50))) {
+            return element;
+        }
+    }
+    
+    return null;
+}
+
+
+// 隐藏函数
+/*
+function hideProcessedMessages(messages, keepLastN = 2) {
+    if (!getAutoHideStatus() || !Array.isArray(messages) || messages.length <= keepLastN) {
+        logger.info(`👻 跳过隐藏: 设置关闭或消息数量不足`);
         return;
     }
     
-    messages.forEach(msg => {
-        msg.extra = msg.extra || {};
-        msg.extra.ghost_summarized = true;
+    const messagesToHide = messages.slice(0, -keepLastN);
+    logger.info(`🎭 开始隐藏 ${messagesToHide.length} 条已总结的消息...`);
+
+    let changesMade = false;
+
+    messagesToHide.forEach((msg, index) => {
+        // 保存原始状态（如果还没保存过）
+        if (msg.extra?.ghost_original_is_system === undefined) {
+            msg.extra = msg.extra || {};
+            msg.extra.ghost_original_is_system = msg.is_system || false;
+        }
+        
+        // 设置为系统消息来隐藏
+        if (!msg.is_system) {
+            msg.is_system = true;
+            changesMade = true;
+        }
+        
+        // 标记消息
+        msg.extra.ghost_hidden = true;
+        msg.extra.isHidden = true;
+        
+        // 更新 DOM 元素的属性
+        const messageElement = findMessageElement(msg, index);
+        if (messageElement) {
+            if (typeof jQuery !== 'undefined' && jQuery(messageElement).length) {
+                jQuery(messageElement).attr('is_system', 'true');
+            } else {
+                messageElement.setAttribute('is_system', 'true');
+            }
+        }
     });
+
+    if (changesMade) {
+        // 触发 ST 的界面更新
+        if (window.SillyTavern_API?.ui?.updateChatScroll) {
+            window.SillyTavern_API.ui.updateChatScroll();
+        }
+        
+        // 触发消息更新事件
+        const event = new Event('chatUpdated');
+        document.dispatchEvent(event);
+        
+        logger.info(`🎭 已隐藏 ${messagesToHide.length} 条消息`);
+    }
     
-    logger.info(`[ghostface] 已标记 ${messages.length} 条消息为已总结`);
+    // 保存聊天数据
+    saveAndRefreshChat();
 }
+// 恢复隐藏的消息（在聊天加载时调用）
+function restoreHiddenMessages() {
+    document.addEventListener('chatLoaded', () => {
+        setTimeout(async () => {
+            try {
+                const context = await getContext();
+                const messages = getMessageArray(context);
+                
+                let changesMade = false;
+                
+                messages.forEach((msg, index) => {
+                    if (msg.extra?.ghost_hidden) {
+                        // 恢复原始的 is_system 状态
+                        const originalIsSystem = msg.extra.ghost_original_is_system || false;
+                        if (msg.is_system !== originalIsSystem) {
+                            msg.is_system = originalIsSystem;
+                            changesMade = true;
+                        }
+                        
+                        // 更新 DOM
+                        const messageElement = findMessageElement(msg, index);
+                        if (messageElement) {
+                            if (typeof jQuery !== 'undefined' && jQuery(messageElement).length) {
+                                jQuery(messageElement).attr('is_system', originalIsSystem.toString());
+                            } else {
+                                messageElement.setAttribute('is_system', originalIsSystem.toString());
+                            }
+                        }
+                    }
+                });
+                
+                if (changesMade && window.SillyTavern_API?.ui?.updateChatScroll) {
+                    window.SillyTavern_API.ui.updateChatScroll();
+                }
+                
+            } catch (error) {
+                logger.error('恢复隐藏消息失败:', error);
+            }
+        }, 1000);
+    });
+}
+
+async function saveAndRefreshChat() {
+    try {
+        if (typeof saveChat === 'function') {
+            await saveChat();
+            logger.info('💾 聊天已保存');
+        }
+    } catch (error) {
+        logger.error('💾 保存聊天失败:', error);
+    }
+}
+*/
 
 function parseModelOutput(rawOutput) {
     logger.info('[ghostface] 开始解析模型输出...');
@@ -599,7 +871,24 @@ function parseModelOutput(rawOutput) {
     }
 }
 
-// 🔧 修复：主要总结函数，添加自动触发标识
+// 给消息打标记
+function markMessagesSummarized(messages) {
+    if (!Array.isArray(messages)) {
+        logger.warn('[ghostface] markMessagesSummarized: 输入不是数组');
+        return;
+    }
+    
+    messages.forEach((msg, index) => {
+        msg.extra = msg.extra || {};
+        msg.extra.ghost_summarized = true;
+        msg.extra.summary_timestamp = Date.now(); // 添加时间戳
+        msg.extra.summary_index = index; // 添加索引用于恢复
+    });
+    
+    logger.info(`[ghostface] 已标记 ${messages.length} 条消息为已总结`);
+}
+
+// 主要总结函数
 async function stealthSummarize(isInitial = false, isAutoTriggered = false) {
     const triggerType = isAutoTriggered ? '自动触发' : '手动触发';
     logger.info(`[ghostface] === 开始 stealthSummarize 流程 (${triggerType}) ===`);
@@ -609,9 +898,9 @@ async function stealthSummarize(isInitial = false, isAutoTriggered = false) {
         "👻 鬼面尾随中...";
     
     const notification = toastr.info(notificationText, null, {
-        timeOut: 0,
-        closeButton: false,
-        progressBar: false,
+        timeOut: 5000,
+        closeButton: true,
+        progressBar: true,
         hideDuration: 0,
         positionClass: "toast-top-center"
     });
@@ -647,11 +936,15 @@ async function stealthSummarize(isInitial = false, isAutoTriggered = false) {
 
         logger.info('[ghostface] 第3步: 开始保存到世界书...');
         const updateResult = await saveToWorldBook(summaryContent);
-        logger.info('[ghostface] 第3步完成: 已保存到世界书');
+        logger.info('[ghostface] 第4步完成: 已保存到世界书');
 
-        logger.info('[ghostface] 第4步: 标记消息为已处理...');
         markMessagesSummarized(messages);
-        logger.info('[ghostface] 第4步完成: 已标记消息');
+        logger.info('[ghostface] 第5步完成: 已标记消息');
+
+        /*if (getAutoHideStatus()) {
+            hideProcessedMessages(messages, keepMessagesCount);
+            logger.info('[ghostface] 第5步完成: 已隐藏消息');
+        }*/
 
         const successText = isAutoTriggered ? 
             `🤖 鬼面自动总结完成！${updateResult.created}个新条目，${updateResult.updated}个更新` : 
@@ -659,9 +952,9 @@ async function stealthSummarize(isInitial = false, isAutoTriggered = false) {
         toastr.success(successText);
         logger.info(`[ghostface] === stealthSummarize 流程成功完成 (${triggerType}) ===`);
 
-    } catch (err) {
-        logger.error(`[ghostface] === stealthSummarize 流程失败 (${triggerType}) ===`);
-        logger.error('[ghostface] 错误详情:', err);
+        } catch (err) {
+            logger.error(`[ghostface] === stealthSummarize 流程失败 (${triggerType}) ===`);
+            logger.error('[ghostface] 错误详情:', err);
         const errorText = isAutoTriggered ? 
             "自动总结失败: " + err.message : 
             "尾随被看破: " + err.message;
@@ -673,18 +966,124 @@ async function stealthSummarize(isInitial = false, isAutoTriggered = false) {
     }
 }
 
-// 🔧 重写：智能更新世界书函数
+// 重置鬼面消息标记函数
+async function resetAllMessageFlags() {
+    const resetBtn = document.getElementById(`${PANEL_ID}_reset_flags`);
+    if (!resetBtn) return;
+
+    // 第一次点击：确认状态
+    if (!resetBtn.classList.contains('confirming')) {
+        resetBtn.classList.add('confirming');
+        resetBtn.textContent = '⚠️ 确认重置？';
+        
+        logger.info('🔄 重置功能：请再次点击确认');
+        toastr.warning('再次点击确认重置所有鬼面标记', null, {
+            timeOut: 3000,
+            closeButton: true
+        });
+        
+        setTimeout(() => {
+            if (resetBtn.classList.contains('confirming')) {
+                resetBtn.classList.remove('confirming');
+                resetBtn.textContent = '🔄 重置鬼面标记';
+            }
+        }, 3000);
+        
+        return;
+    }
+      /*
+
+     try {
+        resetBtn.textContent = '🔄 重置中...';
+        resetBtn.disabled = true;
+
+        const context = await getContext();
+        const messages = getMessageArray(context);
+        
+        let resetCount = 0;
+        let hiddenCount = 0;
+        let changesMade = false;
+        
+        messages.forEach((msg, index) => {
+            // 重置总结标记
+            if (msg.extra?.ghost_summarized) {
+                delete msg.extra.ghost_summarized;
+                delete msg.extra.summary_timestamp;
+                delete msg.extra.summary_index;
+                resetCount++;
+            }
+            
+            // 恢复隐藏的消息
+            if (msg.extra?.ghost_hidden || msg.extra?.isHidden) {
+                // 恢复原始的 is_system 状态
+                const originalIsSystem = msg.extra.ghost_original_is_system || false;
+                if (msg.is_system !== originalIsSystem) {
+                    msg.is_system = originalIsSystem;
+                    changesMade = true;
+                }
+                
+                // 清理所有隐藏相关的标记
+                delete msg.extra.ghost_hidden;
+                delete msg.extra.isHidden;
+                delete msg.extra.ghost_original_is_system;
+                hiddenCount++;
+                
+                // 更新 DOM
+                const messageElement = findMessageElement(msg, index);
+                if (messageElement) {
+                    if (typeof jQuery !== 'undefined' && jQuery(messageElement).length) {
+                        jQuery(messageElement).attr('is_system', originalIsSystem.toString());
+                    } else {
+                        messageElement.setAttribute('is_system', originalIsSystem.toString());
+                    }
+                }
+            }
+        });
+        
+        
+        // 重置消息计数
+      
+        lastMessageCount = 0;
+        
+        // 触发界面更新
+        if (changesMade && window.SillyTavern_API?.ui?.updateChatScroll) {
+            window.SillyTavern_API.ui.updateChatScroll();
+        }
+        
+        const event = new Event('chatUpdated');
+        document.dispatchEvent(event);
+        
+        // 更新消息计数显示
+        updateMessageCount();
+        
+        logger.info(`🔄 重置完成: ${resetCount} 条鬼面标记, ${hiddenCount} 条隐藏状态`);
+        toastr.success(`🔄 重置完成！\n清除 ${resetCount} 个鬼面标记\n恢复 ${hiddenCount} 条隐藏消息`, null, {
+            timeOut: 4000,
+            closeButton: true
+        });
+        
+    } catch (error) {
+        logger.error('🔄 重置失败:', error);
+        toastr.error('重置失败: ' + error.message);
+    } finally {
+        // 恢复按钮状态
+        resetBtn.classList.remove('confirming');
+        resetBtn.textContent = '🔄 重置鬼面标记';
+        resetBtn.disabled = false;
+    }*/
+}
+
+// 智能更新世界书函数
 async function saveToWorldBook(summaryContent) {
     logger.info('[ghostface] === 开始智能保存到世界书 ===');
     
     try {
         const worldSelect = document.querySelector('#world_editor_select');
+        const worldBookName = worldSelect.selectedOptions[0].textContent;
+        logger.info('[ghostface] 当前世界书:', worldBookName);
         if (!worldSelect || !worldSelect.value) {
             throw new Error('请先在 World Info 页面选择一个世界书');
         }
-        
-        const worldBookName = worldSelect.selectedOptions[0].textContent;
-        logger.info('[ghostface] 当前世界书:', worldBookName);
         
         const worldBookData = await loadWorldInfo(worldBookName);
         if (!worldBookData) {
@@ -717,7 +1116,6 @@ async function saveToWorldBook(summaryContent) {
             throw new Error('没有找到有效的分类数据');
         }
 
-        // 🔧 智能更新逻辑：查找或创建条目
         let createdCount = 0;
         let updatedCount = 0;
         
@@ -727,7 +1125,6 @@ async function saveToWorldBook(summaryContent) {
             try {
                 const targetComment = `我们的故事 - ${category}`;
                 
-                // 查找现有条目
                 let existingEntry = null;
                 for (const [entryId, entry] of Object.entries(worldBookData.entries || {})) {
                     if (entry.comment === targetComment) {
@@ -740,12 +1137,10 @@ async function saveToWorldBook(summaryContent) {
                 const newContent = items.join('\n');
                 
                 if (existingEntry) {
-                    // 更新现有条目 - 智能合并内容
                     const existingContent = existingEntry.content || '';
                     const existingLines = existingContent.split('\n').filter(line => line.trim());
                     const newLines = items.filter(item => item.trim());
                     
-                    // 去重合并
                     const allLines = [...existingLines, ...newLines];
                     const uniqueLines = [...new Set(allLines)];
                     
@@ -754,7 +1149,6 @@ async function saveToWorldBook(summaryContent) {
                     logger.info(`[ghostface] 更新条目"${category}"，从${existingLines.length}行增加到${uniqueLines.length}行`);
                     
                 } else {
-                    // 创建新条目
                     const newEntry = createWorldInfoEntry(null, worldBookData);
                     
                     if (!newEntry) {
@@ -762,7 +1156,6 @@ async function saveToWorldBook(summaryContent) {
                         continue;
                     }
                     
-                    // 使用预定义配置或默认配置
                     const predefinedConfig = PREDEFINED_CATEGORIES[category] || {
                         comment: targetComment,
                         key: [category],
@@ -804,20 +1197,21 @@ async function saveToWorldBook(summaryContent) {
         logger.info('[ghostface] 开始保存世界书...');
         await saveWorldInfo(worldBookName, worldBookData, true);
         logger.info('[ghostface] 世界书保存成功');
+        logger.info(`📚 总结已保存到世界书: "${worldBookName}"`);
+        logger.info(`📊 本次操作: 新建${createdCount}个条目, 更新${updatedCount}个条目`);
+        if (createdCount > 0) {
+            const newCategories = Object.keys(categorizedData).slice(0, 3).join(', ');
+            logger.info(`🆕 新增类别: ${newCategories}${Object.keys(categorizedData).length > 3 ? '等' : ''}`);
+        }
 
-        // 刷新世界书界面
         if (document.querySelector('#world_editor_select')) {
             const event = new Event('change', { bubbles: true });
             document.querySelector('#world_editor_select').dispatchEvent(event);
         }
-
-        const message = `👻 鬼面已处理 ${createdCount + updatedCount} 个类别 (新建:${createdCount}, 更新:${updatedCount})`;
-        logger.info(`[ghostface] === 智能世界书保存完成 === 创建: ${createdCount}, 更新: ${updatedCount}`);
-        
         return { created: createdCount, updated: updatedCount };
 
     } catch (error) {
-        logger.error('[ghostface] === 世界书保存失败 ===');
+        logger.error(`❌ 世界书保存失败 - 目标: ${worldSelect?.selectedOptions[0]?.textContent || '未知'}`);
         logger.error('[ghostface] 错误详情:', error);
         
         if (error.message.includes('请先在 World Info 页面选择')) {
@@ -832,286 +1226,256 @@ async function saveToWorldBook(summaryContent) {
     }
 }
 
-function getActiveWorldInfo() {
-    logger.info('[ghostface] 检查当前世界书状态...');
-    
-    if (!world_info) {
-        logger.error('[ghostface] world_info 未定义或为 null');
-        toastr.error(`⚠️ 世界书未加载，请先在 World Info 页面创建或加载一个世界书文件`);
-        throw new Error('世界书未加载，请先创建或加载一个世界书文件');
+// 更新面板的动态数据
+function updatePanelWithCurrentData() {
+    // 更新主题
+     const themeSelect = document.getElementById(`${PANEL_ID}_theme_select`);
+    if (themeSelect) {
+        themeSelect.value = currentTheme;
     }
+    // 应用当前主题
+    applyThemeToDocument(currentTheme);
+
+    // 更新状态
+    updateAutoStatus();
+}
+// 更新阈值
+function updateThresholdDisplay() {
+    const thresholdDisplay = document.getElementById(`${PANEL_ID}_threshold_display`);
+    if (thresholdDisplay) {
+        thresholdDisplay.textContent = userThreshold;
+    }
+}
+
+function toggleSettingsMenu() {
+    const settingsArea = document.getElementById(`${PANEL_ID}_settings_area`);
+    const settingsBtn = document.getElementById(`${PANEL_ID}_settings_toggle`);
     
-    const worldName = world_info.name || 
-                     world_info.filename || 
-                     world_info.title || 
-                     world_info.worldInfoName || 
-                     'DefaultWorldInfo';
+    if (!settingsArea || !settingsBtn) return;
     
-    if (!worldName || worldName === 'DefaultWorldInfo') {
-        logger.warn('[ghostface] 世界书名称为空，使用默认名称');
-        world_info.name = 'GhostFace_WorldBook_' + Date.now();
-        logger.info('[ghostface] 设置临时名称:', world_info.name);
+    // 直接切换类名
+    const isExpanded = settingsBtn.classList.contains('active');
+    
+    if (isExpanded) {
+        settingsArea.style.display = 'none';
+        settingsBtn.classList.remove('active');
+        settingsBtn.innerHTML = '⚙️ 设置菜单';
     } else {
-        world_info.name = worldName;
-    }
-    
-    if (!Array.isArray(world_info.entries)) {
-        logger.warn('[ghostface] world_info.entries 不是数组，正在初始化...');
-        world_info.entries = [];
-    }
-    
-    logger.info(`[ghostface] ✅ 世界书准备就绪: "${world_info.name}", 条目数: ${world_info.entries.length}`);
-    return world_info;
-}
-
-function testWorldInfo() {
-    try {
-        logger.info('🧪 开始测试世界书...');
-        const result = getActiveWorldInfo();
-        logger.info('✅ 测试成功！世界书名称:', result.name);
-        toastr.success('世界书测试成功: ' + result.name);
-        return result;
-    } catch (error) {
-        logger.error('❌ 测试失败:', error);
-        toastr.error('世界书测试失败: ' + error.message);
-        return null;
+        settingsArea.style.display = 'block';
+        settingsBtn.classList.add('active');
+        settingsBtn.innerHTML = '⚙️ 收起设置';
     }
 }
 
-// 🔧 新增：消息监听器，用于自动触发
-function setupMessageListener() {
-    logger.info('🔧 设置消息监听器...');
-    
-    // 监听新消息事件
-    document.addEventListener('messageAdded', () => {
-        setTimeout(checkAutoTrigger, 1000); // 延迟1秒检查，确保消息已处理
-    });
-    
-    // 监听聊天更新事件
-    document.addEventListener('chatLoaded', () => {
-        setTimeout(async () => {
-            try {
-                const context = await getContext();
-                const messages = getMessageArray(context);
-                lastMessageCount = messages.length;
-                logger.info(`🔧 聊天加载完成，初始消息数: ${lastMessageCount}`);
-            } catch (error) {
-                logger.error('🔧 初始化消息计数失败:', error);
-            }
-        }, 1000);
-    });
-    
-    // 备用检查机制：定期检查消息变化
-    setInterval(checkAutoTrigger, 5000); // 每5秒检查一次
-    
-    logger.info('🔧 消息监听器设置完成');
-}
-
-// 🎨 创建鬼面UI按钮
-function createGhostButton() {
-    // 检查按钮是否已存在
-    const existingButton = document.getElementById('ghostface-button');
-    if (existingButton) {
-        existingButton.remove();
-    }
-
-    const buttonHTML = `
-    <div id="ghostface-button" style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        cursor: pointer;
-        user-select: none;
-        transition: all 0.3s ease;
-        transform: scale(1);
-    ">
-        <div id="ghostface-button-main" style="
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-            border: 2px solid #533483;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 
-                0 4px 15px rgba(83, 52, 131, 0.4),
-                0 0 20px rgba(83, 52, 131, 0.2),
-                inset 0 1px 0 rgba(255,255,255,0.1);
-            position: relative;
-            overflow: hidden;
-        ">
-            <!-- 鬼面表情 -->
-            <span style="
-                font-size: 28px;
-                color: #e94560;
-                text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
-                transition: all 0.2s ease;
-            ">👻</span>
-            
-            <!-- 发光效果 -->
-            <div style="
-                position: absolute;
-                top: -50%;
-                left: -50%;
-                width: 200%;
-                height: 200%;
-                background: conic-gradient(transparent, rgba(83, 52, 131, 0.1), transparent);
-                animation: ghostRotate 3s linear infinite;
-                pointer-events: none;
-            "></div>
-        </div>
-        
-        <!-- 自动触发状态指示器 -->
-        <div id="ghostface-auto-indicator" style="
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            width: 20px;
-            height: 20px;
-            background: ${autoTriggerEnabled ? '#4caf50' : '#f44336'};
-            border: 2px solid white;
-            border-radius: 50%;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        ">🤖</div>
-        
-        <!-- 工具提示 -->
-        <div id="ghostface-tooltip" style="
-            position: absolute;
-            bottom: -55px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-            border: 1px solid #533483;
-            min-width: 200px;
-            text-align: center;
-        ">
-            <div>点击：手动总结 👻</div>
-            <div>右键：切换自动模式 🤖</div>
-            <div style="color: #aaa; font-size: 10px; margin-top: 4px;">
-                自动触发: ${autoTriggerEnabled ? '开启' : '关闭'} | 阈值: ${AUTO_TRIGGER_THRESHOLD}条消息
-            </div>
-            <div style="
-                position: absolute;
-                top: -6px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 0;
-                height: 0;
-                border-left: 6px solid transparent;
-                border-right: 6px solid transparent;
-                border-bottom: 6px solid rgba(0, 0, 0, 0.9);
-            "></div>
-        </div>
-    </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', buttonHTML);
-
-    // 添加按钮交互事件
-    const button = document.getElementById('ghostface-button');
-    const mainButton = document.getElementById('ghostface-button-main');
-    const tooltip = document.getElementById('ghostface-tooltip');
-    const autoIndicator = document.getElementById('ghostface-auto-indicator');
-
-    // 🎯 左键点击事件 - 执行总结功能
-    button.addEventListener('click', async (e) => {
+// 设置面板事件
+function setupPanelEvents() {
+    const content = document.getElementById(`${PANEL_ID}_content`);
+    const manualBtn = document.getElementById(`${PANEL_ID}_manual_summary`);
+    const autoBtn = document.getElementById(`${PANEL_ID}_toggle_auto`);
+    const themeSelect = document.getElementById(`${PANEL_ID}_theme_select`);
+    const clearLogBtn = document.getElementById(`${PANEL_ID}_clear_log`);
+    // 设置菜单切换按钮
+  const settingsBtn = document.getElementById(`${PANEL_ID}_settings_toggle`);
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', toggleSettingsMenu);
+    // 移动端触摸支持
+    settingsBtn.addEventListener('touchend', (e) => {
         e.preventDefault();
-        try {
-            // 视觉反馈
-            mainButton.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                mainButton.style.transform = 'scale(1)';
-            }, 150);
+        toggleSettingsMenu();
+    });
 
-            // 执行总结
-            logger.info('🎭 通过UI按钮触发手动总结...');
+    // 自动隐藏选项变化时保存
+    /*
+    const autoHideCheckbox = document.getElementById(`${PANEL_ID}_auto_hide`);
+    autoHideCheckbox?.addEventListener('change', () => {
+        saveUserSettings();
+        logger.info(`🍄 自动隐藏设置已更新为: ${autoHideCheckbox.checked}`);
+    });*/
+
+    // 阈值输入框
+    const thresholdInput = document.getElementById(`${PANEL_ID}_threshold_input`);
+    thresholdInput?.addEventListener('change', (e) => {
+    userThreshold = parseInt(e.target.value) || 40;
+    saveUserSettings();
+    updateThresholdDisplay(); 
+    logger.info(`🎯 阈值已更新为: ${userThreshold}`);
+    });
+
+     // 间隔输入框
+    const intervalInput = document.getElementById(`${PANEL_ID}_interval_input`);
+    intervalInput?.addEventListener('change', (e) => {
+        userInterval = parseInt(e.target.value) || 30;
+        saveUserSettings();
+        restartInterval();
+        logger.info(`💢 检测间隔已更新为: ${userInterval}分钟`);
+    });
+
+    // 重置按钮
+    const resetBtn = document.getElementById(`${PANEL_ID}_reset_flags`);
+    resetBtn?.addEventListener('click', resetAllMessageFlags);
+
+    // 保留消息数输入框
+    const keepMessagesInput = document.getElementById(`${PANEL_ID}_keep_messages_input`);
+    keepMessagesInput?.addEventListener('change', (e) => {
+        keepMessagesCount = parseInt(e.target.value) || 2;
+        if (keepMessagesCount < 1) keepMessagesCount = 1;
+        if (keepMessagesCount > 10) keepMessagesCount = 10;
+        e.target.value = keepMessagesCount; // 确保显示有效值
+        saveUserSettings();
+        logger.info(`🗨️ 保留消息数已更新为: ${keepMessagesCount}`);
+    });
+
+   let clickCount = 0;
+   let clickTimer = null;
+
+
+    // 手动总结
+    manualBtn?.addEventListener('click', async () => {
+        try {
+            logger.info('🎯 通过控制面板触发手动总结...');
             await stealthSummarize();
-            
         } catch (error) {
-            logger.error('🚨 UI按钮触发失败:', error);
-            toastr.error('鬼面按钮出错: ' + error.message);
+            logger.error('🚨 控制面板手动总结失败:', error);
+            toastr.error('手动总结失败: ' + error.message);
         }
     });
 
-    // 🎯 右键点击事件 - 切换自动触发
-    button.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        autoTriggerEnabled = !autoTriggerEnabled;
-        
-        // 更新指示器
-        autoIndicator.style.background = autoTriggerEnabled ? '#4caf50' : '#f44336';
-        
-        // 更新提示文字
-        tooltip.innerHTML = `
-            <div>点击：手动总结 👻</div>
-            <div>右键：切换自动模式 🤖</div>
-            <div style="color: #aaa; font-size: 10px; margin-top: 4px;">
-                自动触发: ${autoTriggerEnabled ? '开启' : '关闭'} | 阈值: ${AUTO_TRIGGER_THRESHOLD}条消息
-            </div>
-            <div style="
-                position: absolute;
-                top: -6px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 0;
-                height: 0;
-                border-left: 6px solid transparent;
-                border-right: 6px solid transparent;
-                border-bottom: 6px solid rgba(0, 0, 0, 0.9);
-            "></div>
-        `;
-        
-        // 显示状态变化提示
-        const statusText = autoTriggerEnabled ? '已开启自动总结' : '已关闭自动总结';
-        toastr.info(`🤖 ${statusText}`, null, {
-            timeOut: 2000,
-            closeButton: true
-        });
-        
-        logger.info(`🤖 自动触发功能已${autoTriggerEnabled ? '开启' : '关闭'}`);
+    // 切换自动模式
+    autoBtn?.addEventListener('click', () => {
+        toggleAutoMode();
     });
 
-    // 悬停效果
-    button.addEventListener('mouseenter', () => {
-        mainButton.style.transform = 'scale(1.1)';
-        mainButton.style.boxShadow = `
-            0 6px 25px rgba(83, 52, 131, 0.6),
-            0 0 30px rgba(83, 52, 131, 0.4),
-            inset 0 1px 0 rgba(255,255,255,0.2)
-        `;
-        tooltip.style.opacity = '1';
+    // 主题切换
+    themeSelect?.addEventListener('change', (e) => {
+        changeTheme(e.target.value);
     });
 
-    button.addEventListener('mouseleave', () => {
-        mainButton.style.transform = 'scale(1)';
-        mainButton.style.boxShadow = `
-            0 4px 15px rgba(83, 52, 131, 0.4),
-            0 0 20px rgba(83, 52, 131, 0.2),
-            inset 0 1px 0 rgba(255,255,255,0.1)
-        `;
-        tooltip.style.opacity = '0';
+    // 清空日志
+    clearLogBtn?.addEventListener('click', () => {
+        const logContent = document.getElementById(`${PANEL_ID}_log_content`);
+        if (logContent) {
+            logContent.innerHTML = '';
+            logger.info('📋 日志已清空');
+        }
     });
 
-    logger.info('🎨 鬼面UI按钮创建完成！');
+    // 点击外部关闭面板
+    document.addEventListener('click', (e) => {
+        const panel = document.getElementById(PANEL_ID);
+        if (panel && !panel.contains(e.target) && isPanelOpen) {
+            closePanel();
+        }
+    });
+}
 }
 
-// 🎨 添加按钮样式动画
-function addButtonStyles() {
+// 重启定时器
+function restartInterval() {
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(checkAutoTrigger, userInterval * 60 * 1000); 
+}
+
+// 切换面板显示
+function togglePanel() {
+    const content = document.getElementById(`${PANEL_ID}_content`);
+    if (!content) return;
+
+    if (isPanelOpen) {
+        closePanel();
+    } else {
+        openPanel();
+    }
+}
+
+function openPanel() {
+     const content = document.getElementById(`${PANEL_ID}_content`);
+    if (!content) return;
+
+    content.classList.add('ghost-panel-show');
+    content.style.visibility = 'visible';
+    content.style.opacity = '1';
+    isPanelOpen = true;
+    
+    // 更新消息计数
+    updateMessageCount();
+    
+    // 确保日志区域可以正常滚动
+    const logContent = document.getElementById(`${PANEL_ID}_log_content`);
+    if (logContent) {
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+}
+
+function closePanel() {
+     const content = document.getElementById(`${PANEL_ID}_content`);
+    if (!content) return;
+
+    content.classList.remove('ghost-panel-show');
+    content.style.opacity = '0';
+    setTimeout(() => {
+        content.style.visibility = 'hidden';
+    }, 300);
+    isPanelOpen = false;
+}
+
+// 切换自动模式
+function toggleAutoMode() {
+    autoTriggerEnabled = !autoTriggerEnabled;
+     saveUserSettings();
+    // 更新按钮状态
+    const autoBtn = document.getElementById('the_ghost_face_control_panel_toggle_auto');
+    if (autoBtn) {
+        autoBtn.dataset.autoEnabled = autoTriggerEnabled;
+        autoBtn.textContent = `🐕 自动${autoTriggerEnabled ? '开启' : '关闭'}`;
+        
+        // 直接设置颜色确保即时更新
+        autoBtn.style.background = `linear-gradient(135deg, 
+            ${autoTriggerEnabled ? 'var(--ghost-success)' : 'var(--ghost-error)'}, 
+            ${autoTriggerEnabled ? 'var(--ghost-success-light)' : 'var(--ghost-error-light)'})`;
+    }
+    
+    // 更新所有状态显示
+    updateStatusDisplay();
+    updateAutoStatus(); // 如果有状态指示器
+    
+    // 调试输出
+    console.log('当前自动状态:', autoTriggerEnabled); 
+    logger.info(`自动触发功能已${autoTriggerEnabled ? '开启' : '关闭'}`);
+}
+
+// 更新状态显示
+function updateStatusDisplay() {
+    const statusContainer = document.getElementById(`${PANEL_ID}_status_text`);
+    if (statusContainer) {
+        statusContainer.textContent = autoTriggerEnabled ? '自动尾随中' : '手动模式';
+        statusContainer.style.color = autoTriggerEnabled ? 
+            'var(--ghost-success)' : 
+            'var(--ghost-error)';
+    }
+}
+
+// 更新消息计数
+async function updateMessageCount() {
+    try {
+        const context = await getContext();
+        const messages = getMessageArray(context);
+        
+        // 只更新数字，样式通过CSS
+        const messageCountElement = document.getElementById(`${PANEL_ID}_message_count`);
+        if (messageCountElement) {
+            messageCountElement.textContent = messages.length;
+            
+            // 可选：根据消息数量添加状态类
+            messageCountElement.className = messages.length > AUTO_TRIGGER_THRESHOLD ? 'count-high' : 'count-normal';
+        }
+    } catch (error) {
+        logger.warn('📊 无法更新消息计数:', error);
+    }
+}
+
+
+// 🎨 添加样式
+function addGhostStyles() {
     const style = document.createElement('style');
     style.textContent = `
         @keyframes ghostRotate {
@@ -1119,75 +1483,94 @@ function addButtonStyles() {
             to { transform: rotate(360deg); }
         }
         
-        @keyframes ghostPulse {
-            0%, 100% { 
-                transform: scale(1);
-                filter: brightness(1);
-            }
-            50% { 
-                transform: scale(1.05);
-                filter: brightness(1.2);
-            }
+        
+        #${PANEL_ID}_content button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         
-        #ghostface-button:active #ghostface-button-main {
-            animation: ghostPulse 0.3s ease;
+        #${PANEL_ID}_content select:hover {
+            border-color: ${THEME_CONFIGS[currentTheme].secondary};
+        }
+        
+        #${PANEL_ID}_log_content::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #${PANEL_ID}_log_content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        #${PANEL_ID}_log_content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
         }
         
         /* 响应式设计 */
         @media (max-width: 768px) {
-            #ghostface-button {
-                top: 10px !important;
-                right: 10px !important;
+            #${PANEL_ID} {
+                right: 20px !important;
+                top: 15px !important;
             }
-            #ghostface-button-main {
-                width: 50px !important;
-                height: 50px !important;
+            
+            #${PANEL_ID}_content {
+                width: calc(100vw - 40px) !important;
+                max-width: 300px !important;
+                right: -10px !important;
             }
-            #ghostface-button-main span {
-                font-size: 24px !important;
+
+        }
+        
+        @media (max-width: 480px) {
+            #${PANEL_ID}_content {
+                width: calc(100vw - 20px) !important;
+                right: -25px !important;
             }
         }
     `;
     document.head.appendChild(style);
 }
 
-// 🔧 修复5: 安全的初始化流程
+// 初始化时加载保存的主题
+function loadSavedTheme() {
+    const saved = JSON.parse(localStorage.getItem('ghost_face_settings'));
+    if (saved?.theme) {
+        currentTheme = saved.theme;
+        applyTheme(currentTheme);
+    }
+}
+
+
+// 初始化函数
 function initializeGhostFace() {
+    loadSavedTheme();
+    currentTheme = extension_settings.the_ghost_face?.theme || 'classic';
+    const themeSelect = document.getElementById('the_ghost_face_control_panel_theme_select');
+    if (themeSelect) {
+        themeSelect.value = currentTheme;
+    }
+    
+    changeTheme(currentTheme);
     try {
-        // 第1步：创建日志容器（不触发日志）
-        createLogContainer();
-        
-        // 第2步：添加样式
-        addLogStyles();
-        
-        // 🎨 第3步：创建UI按钮
-        createGhostButton();
-        addButtonStyles();
-        
-        // 🔧 第4步：设置消息监听器
+        createGhostControlPanel();
+        addGhostMenuItem();
         setupMessageListener();
-        
-        // 第5步：等待DOM完全加载后再记录日志
+        /*restoreHiddenMessages(); */
         setTimeout(() => {
-            if (logSystemInitialized) {
-                logger.info('🎭 鬼面插件初始化完成！');
-                logger.info('📝 左键点击：手动总结 | 右键点击：切换自动模式');
-                logger.info(`🤖 自动触发: ${autoTriggerEnabled ? '开启' : '关闭'} (${AUTO_TRIGGER_THRESHOLD}条消息阈值)`);
-                logger.info('🎨 UI按钮位置：右上角悬浮');
-                
-                // 初始化消息计数
-                setTimeout(async () => {
-                    try {
-                        const context = await getContext();
-                        const messages = getMessageArray(context);
-                        lastMessageCount = messages.length;
-                        logger.info(`📊 当前消息数: ${lastMessageCount}`);
-                    } catch (error) {
-                        logger.warn('📊 无法获取初始消息数:', error);
-                    }
-                }, 2000);
-            }
+            systemInitialized = true;
+            logger.info('❤ 鬼面控制台已启动！开始进行蹲起招手吧！');
+            // 初始化消息计数
+            setTimeout(async () => {
+                try {
+                    const context = await getContext();
+                    const messages = getMessageArray(context);
+                    lastMessageCount = messages.length;
+                    logger.info(`📊 当前消息数: ${lastMessageCount}`);
+                    updateMessageCount();
+                } catch (error) {
+                    logger.warn('📊 无法获取初始消息数:', error);
+                }
+            }, 2000);
         }, 100);
         
     } catch (error) {
@@ -1195,40 +1578,5 @@ function initializeGhostFace() {
     }
 }
 
-// 添加slash命令
-registerSlashCommand(
-    'gf_sum',
-    async () => {
-        await stealthSummarize();
-    },
-    [],
-    '对鬼面发起决斗邀请（手动总结）',
-    true,
-    true
-);
-
-// 添加自动触发开关命令
-registerSlashCommand(
-    'gf_auto',
-    () => {
-        autoTriggerEnabled = !autoTriggerEnabled;
-        const statusText = autoTriggerEnabled ? '已开启' : '已关闭';
-        toastr.info(`🤖 自动总结功能${statusText}`);
-        logger.info(`🤖 自动触发功能已${autoTriggerEnabled ? '开启' : '关闭'}`);
-        
-        // 更新按钮指示器
-        const indicator = document.getElementById('ghostface-auto-indicator');
-        if (indicator) {
-            indicator.style.background = autoTriggerEnabled ? '#4caf50' : '#f44336';
-        }
-        
-        return `自动总结功能${statusText}`;
-    },
-    [],
-    '切换鬼面自动总结功能',
-    true,
-    true
-);
-
-// 🎯 关键修复：延迟初始化，避免递归
+// 🎯 延迟初始化
 setTimeout(initializeGhostFace, 50);

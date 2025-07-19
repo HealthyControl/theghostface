@@ -1,145 +1,289 @@
 /* TheGhostFace - 鬼面控制台样式 */
 
 /* ===== CSS变量定义 ===== */
+/* ===== CSS变量定义 ===== */
 :root {
-    /* 通用颜色 */
+    /* 🎯 核心主题变量 - 默认为赛博朋克风格 */
+    --ghost-black-overlay: rgba(0, 0, 0, 0.9);
+    --ghost-black-deep: rgba(0, 0, 0, 0.95);
+    --ghost-gray-dark: rgba(40, 40, 40, 0.8);
+    --ghost-gray-medium: rgba(60, 60, 60, 0.6);
+    --ghost-gray-light: rgba(80, 80, 80, 0.4);
+    --ghost-primary: #1B435E;
+    --ghost-secondary: #38667E;
+    --ghost-background: linear-gradient(135deg, #161638, #3A2B50, #563457);
+    --ghost-accent: #8A9BB8;
+    --ghost-text-primary: #B8C5D6;
+    --ghost-text-secondary: #8A9BB8;
+    --ghost-shadow: rgba(56, 102, 126, 0.4);
+    --ghost-glow: rgba(56, 102, 126, 0.3);
+    
+    /* 🚦 状态颜色 - 保持通用性 */
     --ghost-success: #4caf50;
     --ghost-success-light: #81c784;
     --ghost-error: #f44336;
     --ghost-error-light: #ef5350;
     --ghost-warning: #ff9800;
-    --ghost-white: #ffffff;
-    --ghost-gray-light: rgba(255, 255, 255, 0.1);
-    --ghost-gray-medium: rgba(255, 255, 255, 0.2);
-    --ghost-gray-dark: rgba(255, 255, 255, 0.05);
-    --ghost-black-overlay: rgba(0, 0, 0, 0.95);
-    --ghost-black-deep: rgba(0, 0, 0, 0.6);
+    --ghost-warning-light: #ffb74d;
     
-    /* 尺寸变量 */
-    --ghost-panel-width: 320px;
-    --ghost-button-size: 50px;
+    /* 🎨 通用颜色 */
+    --ghost-white: #ffffff;
+    --ghost-black: #000000;
+    --ghost-transparent: transparent;
+    
+    /* 🌫️ 自适应灰度系统 - 会根据主题动态调整 */
+    --ghost-overlay-dark: rgba(0, 0, 0, 0.85);
+    --ghost-overlay-medium: rgba(0, 0, 0, 0.6);
+    --ghost-overlay-light: rgba(0, 0, 0, 0.3);
+    --ghost-glass-dark: rgba(255, 255, 255, 0.15);
+    --ghost-glass-medium: rgba(255, 255, 255, 0.1);
+    --ghost-glass-light: rgba(255, 255, 255, 0.05);
+    
+    /* 📐 尺寸变量 */
+    --ghost-panel-width: 420px;
+    --ghost-panel-max-width: min(90vw, 420px);
+    --ghost-button-size: 48px;
     --ghost-border-radius: 12px;
     --ghost-border-radius-small: 8px;
+    --ghost-border-radius-large: 16px;
     --ghost-border-radius-round: 50%;
     
-    /* 动画变量 */
+    /* ⚡ 动画变量 */
+    --ghost-transition-ultra-fast: 0.1s ease;
     --ghost-transition-fast: 0.2s ease;
     --ghost-transition-medium: 0.3s ease;
-    --ghost-transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --ghost-transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    --ghost-transition-bounce: 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
-/* ===== 主题定义 ===== */
-/* 经典紫魔主题 */
-[data-ghost-theme="classic"] {
-    --ghost-primary: #533483;
-    --ghost-secondary: #e94560;
-    --ghost-background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-    --ghost-shadow: rgba(83, 52, 131, 0.4);
-    --ghost-glow: rgba(83, 52, 131, 0.2);
-    --ghost-accent: #66b3ff;
-}
+/* ===== 🎨 高级主题定义 ===== */
 
-/* 深海蓝调主题 */
+/* 深海叹息 */
 [data-ghost-theme="ocean"] {
-    --ghost-primary: #0d7377;
-    --ghost-secondary: #14a085;
-    --ghost-background: linear-gradient(135deg, #0a2e36, #0d4f56, #0a2e36);
-    --ghost-shadow: rgba(13, 115, 119, 0.4);
-    --ghost-glow: rgba(13, 115, 119, 0.2);
-    --ghost-accent: #40e0d0;
+    --ghost-primary: #0077be;      /* 海洋蓝 */
+    --ghost-secondary: #00a0d1;    /* 天蓝色 */
+    --ghost-background: linear-gradient(135deg, #003d5c, #0077be, #00a0d1);
+    --ghost-accent: #00d4ff;       /* 明亮天蓝 */
+    --ghost-text-primary: #b3e6ff;
+    --ghost-text-secondary: #80d4ff;
+    --ghost-shadow: rgba(1, 103, 100, 0.5);
+    --ghost-glow: rgba(107, 125, 127, 0.3);
+    
+    /* 主题特定的玻璃效果 */
+    --ghost-glass-dark: rgba(160, 196, 199, 0.15);
+    --ghost-glass-medium: rgba(160, 196, 199, 0.1);
+    --ghost-glass-light: rgba(160, 196, 199, 0.05);
 }
 
-/* 夕阳暖橙主题 */
-[data-ghost-theme="sunset"] {
-    --ghost-primary: #d84315;
-    --ghost-secondary: #ff7043;
-    --ghost-background: linear-gradient(135deg, #3e2723, #5d4037, #3e2723);
-    --ghost-shadow: rgba(216, 67, 21, 0.4);
-    --ghost-glow: rgba(216, 67, 21, 0.2);
-    --ghost-accent: #ffab40;
+/* 赛博朋克 */
+[data-ghost-theme="cyberpunk"] {
+    --ghost-primary: #1B435E;
+    --ghost-secondary: #38667E;
+    --ghost-background: linear-gradient(135deg, #161638, #3A2B50, #563457);
+    --ghost-accent: #8A9BB8;
+    --ghost-text-primary: #B8C5D6;
+    --ghost-text-secondary: #8A9BB8;
+    --ghost-shadow: rgba(56, 102, 126, 0.5);
+    --ghost-glow: rgba(138, 155, 184, 0.3);
+    
+    --ghost-glass-dark: rgba(184, 197, 214, 0.15);
+    --ghost-glass-medium: rgba(184, 197, 214, 0.1);
+    --ghost-glass-light: rgba(184, 197, 214, 0.05);
 }
 
-/* 森林绿意主题 */
-[data-ghost-theme="forest"] {
-    --ghost-primary: #2e7d32;
-    --ghost-secondary: #4caf50;
-    --ghost-background: linear-gradient(135deg, #1b2e1f, #2e5233, #1b2e1f);
-    --ghost-shadow: rgba(46, 125, 50, 0.4);
-    --ghost-glow: rgba(46, 125, 50, 0.2);
-    --ghost-accent: #81c784;
+/* 哥特暗黑 */
+[data-ghost-theme="gothic"] {
+    --ghost-primary: #411D2B;
+    --ghost-secondary: #430E18;
+    --ghost-background: linear-gradient(135deg, #110E15, #211720, #2A0A11);
+    --ghost-accent: #8B6B7D;
+    --ghost-text-primary: #D4C4CD;
+    --ghost-text-secondary: #B8A8B1;
+    --ghost-shadow: rgba(65, 29, 43, 0.6);
+    --ghost-glow: rgba(139, 107, 125, 0.4);
+    
+    --ghost-glass-dark: rgba(212, 196, 205, 0.15);
+    --ghost-glass-medium: rgba(212, 196, 205, 0.1);
+    --ghost-glass-light: rgba(212, 196, 205, 0.05);
 }
 
-/* 玫瑰粉梦主题 */
-[data-ghost-theme="rose"] {
-    --ghost-primary: #c2185b;
-    --ghost-secondary: #e91e63;
-    --ghost-background: linear-gradient(135deg, #301b28, #4a2c3a, #301b28);
-    --ghost-shadow: rgba(194, 24, 91, 0.4);
-    --ghost-glow: rgba(194, 24, 91, 0.2);
-    --ghost-accent: #f48fb1;
+/* 科技之梦 */
+[data-ghost-theme="scifi"] {
+    --ghost-primary: #24225D;
+    --ghost-secondary: #322C74;
+    --ghost-background: linear-gradient(135deg, #0E0F18, #130F41, #424081);
+    --ghost-accent: #7B6D93;
+    --ghost-text-primary: #C4C1E8;
+    --ghost-text-secondary: #A09BCF;
+    --ghost-shadow: rgba(36, 34, 93, 0.5);
+    --ghost-glow: rgba(123, 109, 147, 0.4);
+    
+    --ghost-glass-dark: rgba(196, 193, 232, 0.15);
+    --ghost-glass-medium: rgba(196, 193, 232, 0.1);
+    --ghost-glass-light: rgba(196, 193, 232, 0.05);
 }
 
-/* ===== 动画定义 ===== */
-@keyframes ghostRotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+/* 战术迷彩 */
+[data-ghost-theme="military"] {
+    --ghost-primary: #26436B;
+    --ghost-secondary: #2E4E7F;
+    --ghost-background: linear-gradient(135deg, #121E2C, #263041, #80463A);
+    --ghost-accent: #7B6D62;
+    --ghost-text-primary: #B8B2A8;
+    --ghost-text-secondary: #9A9289;
+    --ghost-shadow: rgba(38, 67, 107, 0.5);
+    --ghost-glow: rgba(123, 109, 98, 0.3);
+    
+    --ghost-glass-dark: rgba(184, 178, 168, 0.15);
+    --ghost-glass-medium: rgba(184, 178, 168, 0.1);
+    --ghost-glass-light: rgba(184, 178, 168, 0.05);
 }
 
+/* 无尽星辰 */
+[data-ghost-theme="cosmic"] {
+    --ghost-primary: #2D3B6A;
+    --ghost-secondary: #384589;
+    --ghost-background: linear-gradient(135deg, #1D2D46, #47366D, #5A4485);
+    --ghost-accent: #8B7BA8;
+    --ghost-text-primary: #D1C7E8;
+    --ghost-text-secondary: #B5A9D4;
+    --ghost-shadow: rgba(45, 59, 106, 0.5);
+    --ghost-glow: rgba(139, 123, 168, 0.4);
+    
+    --ghost-glass-dark: rgba(209, 199, 232, 0.15);
+    --ghost-glass-medium: rgba(209, 199, 232, 0.1);
+    --ghost-glass-light: rgba(209, 199, 232, 0.05);
+}
+
+/* 翡翠森林 */
+[data-ghost-theme="emerald"] {
+    --ghost-primary: #0C2703;
+    --ghost-secondary: #125607;
+    --ghost-background: linear-gradient(135deg, #090804, #071402, #074300);
+    --ghost-accent: #4A6741;
+    --ghost-text-primary: #A8C4A2;
+    --ghost-text-secondary: #8BAF85;
+    --ghost-shadow: rgba(12, 39, 3, 0.6);
+    --ghost-glow: rgba(74, 103, 65, 0.4);
+    
+    --ghost-glass-dark: rgba(168, 196, 162, 0.15);
+    --ghost-glass-medium: rgba(168, 196, 162, 0.1);
+    --ghost-glass-light: rgba(168, 196, 162, 0.05);
+}
+
+/* 深渊凝望 */
+[data-ghost-theme="abyss"] {
+    --ghost-primary: #105E60;
+    --ghost-secondary: #254D70;
+    --ghost-background: linear-gradient(135deg, #004955, #133155, #080B38);
+    --ghost-accent: #6B7D7F;
+    --ghost-text-primary: #B8C8CA;
+    --ghost-text-secondary: #9BB0B2;
+    --ghost-shadow: rgba(16, 94, 96, 0.6);
+    --ghost-glow: rgba(107, 125, 127, 0.4);
+    
+    --ghost-glass-dark: rgba(184, 200, 202, 0.15);
+    --ghost-glass-medium: rgba(184, 200, 202, 0.1);
+    --ghost-glass-light: rgba(184, 200, 202, 0.05);
+}
+
+/* ===== ✨ 高级动画定义 ===== */
+/* 优雅淡入 */
 @keyframes ghostFadeIn {
     from {
         opacity: 0;
-        transform: translateY(-10px) scale(0.95);
+        transform: translateY(-20px) scale(0.9);
+        filter: blur(4px);
     }
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
+        filter: blur(0);
     }
 }
 
+/* 神秘脉动 */
 @keyframes ghostPulse {
     0%, 100% {
         box-shadow: 
-            0 4px 15px var(--ghost-shadow),
-            0 0 20px var(--ghost-glow);
+            0 4px 20px var(--ghost-shadow),
+            0 0 30px var(--ghost-glow),
+            inset 0 1px 0 var(--ghost-glass-light);
     }
     50% {
         box-shadow: 
-            0 6px 25px var(--ghost-shadow),
-            0 0 30px var(--ghost-glow);
+            0 8px 40px var(--ghost-shadow),
+            0 0 60px var(--ghost-glow),
+            inset 0 1px 0 var(--ghost-glass-medium);
     }
 }
 
-@keyframes resetPulse {
-    0%, 100% { 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2); 
+/* 成功动画 */
+@keyframes successGlow {
+    0% { 
+        box-shadow: 0 0 0 0 var(--ghost-success);
     }
     50% { 
-        box-shadow: 0 4px 20px rgba(244, 67, 54, 0.6); 
+        box-shadow: 0 0 0 8px rgba(76, 175, 80, 0.4);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 var(--ghost-success);
     }
 }
 
+/* 流畅下滑展开 */
 @keyframes slideDown {
     from {
         opacity: 0;
         max-height: 0;
+        transform: translateY(-10px);
     }
     to {
         opacity: 1;
-        max-height: 300px;
+        max-height: 500px;
+        transform: translateY(0);
     }
 }
 
-/* ===== 主容器 ===== */
+/* 弹性缩放 */
+@keyframes bounceScale {
+    0% { 
+        transform: scale(1); 
+    }
+    50% { 
+        transform: scale(1.05); 
+    }
+    100% { 
+        transform: scale(1); 
+    }
+}
+
+/* 光环扫描效果 */
+@keyframes scanGlow {
+    0% {
+        box-shadow: inset 0 0 0 0 var(--ghost-accent);
+    }
+    50% {
+        box-shadow: inset 0 0 20px 0 var(--ghost-accent);
+    }
+    100% {
+        box-shadow: inset 0 0 0 0 var(--ghost-accent);
+    }
+}
+
+/* ===== 🏗️ 主容器 ===== */
 #the_ghost_face_control_panel {
     position: fixed;
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10000;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     user-select: none;
+    
+    /* 🎯 增强的视觉效果 */
+    filter: drop-shadow(0 10px 30px var(--ghost-overlay-dark));
 }
-
 /* ===== 状态指示器 ===== */
 #the_ghost_face_control_panel_status {
     position: absolute;
@@ -149,7 +293,7 @@
     height: 16px;
     border: 2px solid var(--ghost-white);
     border-radius: var(--ghost-border-radius-round);
-    font-size: 8px;
+    font-size: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -168,37 +312,35 @@
 #the_ghost_face_control_panel_status.status-disabled {
     background: var(--ghost-error);
 }
-
-/* ===== 控制面板 ===== */
+/* 面板显示状态 */
 #the_ghost_face_control_panel_content {
-    position: fixed;
-    top: 80px;
-    left: 50%;
-    transform: translateX(-50%) scale(0.95);
-    width: min(400px, calc(100vw - 40px));
-    height: 85vh;
-    max-height: calc(100vh - 100px);
-    min-height: 500px;
-    background: var(--ghost-black-overlay);
-    border: 1px solid var(--ghost-primary);
-    border-radius: var(--ghost-border-radius);
-    box-shadow: 
-        0 8px 32px var(--ghost-black-deep),
-        0 0 20px var(--ghost-glow);
+    background: var(--ghost-background);
     backdrop-filter: blur(10px);
-    opacity: 0;
-    visibility: hidden;
-    transition: all var(--ghost-transition-slow);
+    border: 1px solid var(--ghost-primary);
+    width: min(420px, calc(100vw - 40px));
+    height: min(85vh, calc(100vh - 100px));
+    max-height: calc(100vh - 80px);
+    max-width: 420px;
+    min-width: 300px;
+    min-height: 400px;
+    
+    /* 🎯 智能定位：始终居中且不超出屏幕 */
+    position: fixed;
+    top: max(20px, calc(50vh - 42.5vh));
+    left: 50%;
+    transform: translateX(-50%);
+    
+    /* 🎯 确保面板可以正确滚动 */
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-/* 面板显示状态 */
-#the_ghost_face_control_panel_content.ghost-panel-show {
-    transform: translateX(-50%) scale(1);
-    opacity: 1;
-    visibility: visible;
+.ghost-panel-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0; 
 }
 
 /* ===== 面板头部 ===== */
@@ -249,63 +391,373 @@
     display: flex;
     flex-direction: column;
 }
+/* ===== 🎯 现代化按钮系统 ===== */
 
-/* ===== 按钮样式 ===== */
+/* 基础按钮样式 */
 .ghost-button {
+    /* 🎨 外观设计 */
     border: none;
-    color: var(--ghost-white);
-    padding: 15px 12px;
     border-radius: var(--ghost-border-radius-small);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    transition: all var(--ghost-transition-fast);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    min-height: 48px;
     background: linear-gradient(135deg, var(--ghost-secondary), var(--ghost-accent));
-}
-
-.ghost-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* 自动按钮特殊状态 */
-#the_ghost_face_control_panel[data-auto-enabled="true"] #the_ghost_face_control_panel_toggle_auto,
-#the_ghost_face_control_panel_toggle_auto[data-auto-enabled="true"] {
-    background: linear-gradient(135deg, var(--ghost-success), var(--ghost-success-light)) !important;
-}
-
-#the_ghost_face_control_panel[data-auto-enabled="false"] #the_ghost_face_control_panel_toggle_auto,
-#the_ghost_face_control_panel_toggle_auto[data-auto-enabled="false"] {
-    background: linear-gradient(135deg, var(--ghost-error), var(--ghost-error-light)) !important;
-}
-
-/* 重置按钮特殊样式 */
-.ghost-reset-button {
-    background: linear-gradient(135deg, #ff6b35, #f7931e) !important;
+    color: var(--ghost-text-primary);
+    box-shadow: 
+        0 2px 8px var(--ghost-overlay-light),
+        0 1px 0 var(--ghost-glass-light) inset;
+    
+    /* 📐 尺寸和间距 */
+    padding: 12px 16px;
+    min-height: 48px;
+    font-size: 13px;
+    font-weight: 600;
+    
+    /* 🎭 布局 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+    
+    /* ⚡ 动画 */
+    transition: all var(--ghost-transition-fast);
     position: relative;
     overflow: hidden;
 }
 
-.ghost-reset-button:hover {
-    background: linear-gradient(135deg, #ff7849, #ffab40) !important;
+/* 按钮悬停效果 */
+.ghost-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+    box-shadow: 
+        0 6px 20px var(--ghost-shadow),
+        0 0 15px var(--ghost-glow),
+        0 1px 0 var(--ghost-glass-medium) inset;
+    filter: brightness(1.1);
 }
 
-.ghost-reset-button.confirming {
-    background: linear-gradient(135deg, #f44336, #e57373) !important;
-    animation: resetPulse 1s ease-in-out infinite;
+/* 按钮激活效果 */
+.ghost-button:active {
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 8px var(--ghost-overlay-light),
+        0 1px 0 var(--ghost-glass-light) inset;
+    transition: all var(--ghost-transition-ultra-fast);
+}
+
+/* 按钮禁用状态 */
+.ghost-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.3);
+}
+
+/* ===== 🎯 按钮变体样式 ===== */
+
+/* 主要操作按钮 */
+.ghost-primary-button {
+    background: linear-gradient(135deg, var(--ghost-primary), var(--ghost-secondary));
+    box-shadow: 
+        0 4px 12px var(--ghost-shadow),
+        0 1px 0 var(--ghost-glass-light) inset;
+}
+
+.ghost-primary-button:hover {
+    box-shadow: 
+        0 8px 25px var(--ghost-shadow),
+        0 0 20px var(--ghost-glow),
+        0 1px 0 var(--ghost-glass-medium) inset;
+}
+
+/* 操作按钮 */
+.ghost-action-button {
+    background: linear-gradient(135deg, var(--ghost-accent), var(--ghost-text-secondary));
+    font-size: 11px;
+    padding: 8px 12px;
+    min-height: 36px;
+}
+
+/* ===== 🎯 功能按钮特殊状态 ===== */
+
+/* 自动开关按钮 */
+.ghost-auto-toggle[data-auto-enabled="true"] {
+    background: linear-gradient(135deg, var(--ghost-success), var(--ghost-success-light)) !important;
+    animation: successGlow 2s ease-in-out infinite;
+}
+
+.ghost-auto-toggle[data-auto-enabled="false"] {
+    background: linear-gradient(135deg, var(--ghost-error), var(--ghost-error-light)) !important;
+}
+
+.ghost-auto-toggle[data-auto-enabled="true"]:hover {
+    box-shadow: 
+        0 6px 20px rgba(76, 175, 80, 0.4),
+        0 0 15px rgba(76, 175, 80, 0.3),
+        0 1px 0 var(--ghost-glass-medium) inset;
+}
+
+.ghost-auto-toggle[data-auto-enabled="false"]:hover {
+    box-shadow: 
+        0 6px 20px rgba(244, 67, 54, 0.4),
+        0 0 15px rgba(244, 67, 54, 0.3),
+        0 1px 0 var(--ghost-glass-medium) inset;
+}
+
+.ghost-restore-button:hover {
+    background: linear-gradient(135deg, #ff7849, #ffab40);
+    box-shadow: 
+        0 6px 20px rgba(255, 107, 53, 0.4),
+        0 0 15px rgba(255, 107, 53, 0.3);
+}
+
+.ghost-restore-button.confirming {
+    background: linear-gradient(135deg, var(--ghost-error), var(--ghost-error-light));
+    animation: dangerPulse 1s ease-in-out infinite;
+}
+
+
+.ghost-theme-button:hover {
+    animation: bounceScale 0.3s ease;
+}
+
+.ghost-theme-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--ghost-glass-medium), transparent);
+    transition: left var(--ghost-transition-slow);
+}
+
+.ghost-theme-button:hover::before {
+    left: 100%;
 }
 
 /* 设置按钮 */
+.ghost-settings-button {
+    background: linear-gradient(135deg, #546e7a, #78909c);
+    transition: all var(--ghost-transition-medium);
+}
+
 .ghost-settings-button:hover {
-    background: linear-gradient(135deg, #546e7a, #78909c) !important;
+    background: linear-gradient(135deg, #607d8b, #90a4ae);
+    box-shadow: 
+        0 6px 20px rgba(84, 110, 122, 0.4),
+        0 0 15px rgba(84, 110, 122, 0.3);
 }
 
 .ghost-settings-button.active {
-    background: linear-gradient(135deg, #4caf50, #81c784) !important;
+    background: linear-gradient(135deg, var(--ghost-success), var(--ghost-success-light));
+    animation: scanGlow 1.5s ease-in-out infinite;
+}
+
+.ghost-settings-button.active:hover {
+    box-shadow: 
+        0 6px 20px rgba(76, 175, 80, 0.4),
+        0 0 15px rgba(76, 175, 80, 0.3);
+}
+
+/* ===== 🎯 按钮布局和容器 ===== */
+
+/* 主要操作按钮区域 */
+.ghost-main-actions-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+/* 响应式：小屏幕下改为单列 */
+@media (max-width: 480px) {
+    .ghost-main-actions { 
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+
+.ghost-main-actions-vertical .ghost-button {
+    width: 100%;
+    min-height: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 16px;
+    justify-content: flex-start;
+    gap: 12px;
+}
+
+/* ===== 🎯 按钮内部元素 ===== */
+
+/* 按钮图标 */
+.button-icon {
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 按钮文字 */
+.button-text {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* 小尺寸按钮的文字调整 */
+.ghost-action-button .button-text {
+    font-size: 10px;
+}
+
+/* ===== 🎯 设置卡片系统 ===== */
+
+/* 设置区域 */
+.ghost-settings-area {
+    display: none;
+    animation: slideDown var(--ghost-transition-slow);
+}
+
+.ghost-settings-area.show {
+    display: block;
+}
+
+/* 设置卡片 */
+.ghost-settings-card {
+    background: var(--ghost-glass-light);
+    border: 1px solid var(--ghost-primary);
+    border-radius: var(--ghost-border-radius);
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: all var(--ghost-transition-medium);
+}
+
+.ghost-settings-card:hover {
+    border-color: var(--ghost-accent);
+    box-shadow: 0 2px 8px var(--ghost-overlay-light);
+}
+
+/* 卡片头部 */
+.card-header {
+    background: var(--ghost-glass-medium);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--ghost-primary);
+    color: var(--ghost-text-primary);
+}
+
+.card-icon {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ghost-text-primary);
+}
+
+/* 卡片内容 */
+.card-content {
+    padding: 16px;
+}
+
+/* ===== 🎯 输入框网格系统 ===== */
+
+/* 响应式网格 */
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+@media (max-width: 480px) {
+    .input-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+
+/* 输入组 */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 范围输入容器 */
+.range-input-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: end;
+}
+
+@media (max-width: 480px) {
+    .range-input-container {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        gap: 8px;
+    }
+    
+    .range-arrow {
+        display: none;
+    }
+    
+    .range-input-container .ghost-button {
+        grid-column: 1 / -1;
+        margin-top: 8px;
+    }
+}
+
+.range-arrow {
+    color: var(--ghost-accent);
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-align: center;
+    opacity: 0.7;
+}
+
+/* ===== 🎯 特殊动画效果 ===== */
+
+/* 按钮涟漪效果 */
+.ghost-button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: var(--ghost-glass-medium);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+    pointer-events: auto;
+}
+
+.ghost-button:active::after {
+    width: 300px;
+    height: 300px;
+    transition: width 0.1s, height 0.1s;
+}
+
+/* 加载状态动画 */
+.ghost-button.loading {
+    pointer-events: auto;
+    opacity: 0.8;
+}
+
+.ghost-button.loading .button-icon::before {
+    content: '⏳';
+    animation: ghostRotate 1s linear infinite;
+}
+
+.ghost-button.loading .button-text {
+    opacity: 0.7;
 }
 
 /* ===== 表单控件 ===== */
@@ -426,29 +878,36 @@
     flex-shrink: 0;
 }
 
-/* ===== 日志区域 ===== */
+/* ===== 📋 现代化日志系统 ===== */
+
+/* 日志区域容器 */
 .ghost-log-section {
     flex: 1;
     min-height: 200px;
-    border-top: 1px solid var(--ghost-gray-light);
+    border-top: 1px solid var(--ghost-primary);
     display: flex;
     flex-direction: column;
     margin-top: auto;
+    background: var(--ghost-glass-light);
+    border-radius: var(--ghost-border-radius) var(--ghost-border-radius) 0 0;
+    overflow: visible;
+    box-shadow: 
+        0 -2px 8px var(--ghost-overlay-light),
+        inset 0 1px 0 var(--ghost-glass-medium);
 }
 
-/* 当设置区域显示时，日志区域最小化 */
-.ghost-panel-body:has(#the_ghost_face_control_panel_settings_area:not([style*="display: none"])) .ghost-log-section {
+/* 动态高度调整 - 当设置区域显示时 */
+.ghost-panel-body:has(.ghost-settings-area:not([style*="display: none"])) .ghost-log-section {
     flex: 0 0 200px;
     min-height: 200px;
 }
 
-/* 当设置区域隐藏时，日志区域扩展 */
-.ghost-panel-body:has(#the_ghost_face_control_panel_settings_area[style*="display: none"]) .ghost-log-section {
+.ghost-panel-body:has(.ghost-settings-area[style*="display: none"]) .ghost-log-section {
     flex: 2;
     min-height: 300px;
 }
 
-/* 兼容性fallback - 当浏览器不支持:has()时 */
+/* 兼容性fallback */
 .ghost-log-section.expanded {
     flex: 2 !important;
     min-height: 300px !important;
@@ -459,251 +918,883 @@
     min-height: 200px !important;
 }
 
+/* ===== 📋 日志头部 ===== */
 .ghost-log-header {
-    padding: 10px 20px;
-    background: var(--ghost-gray-dark);
+    padding: 12px 20px;
+    background: linear-gradient(135deg, var(--ghost-primary), var(--ghost-secondary));
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-shrink: 0;
+    border-bottom: 1px solid var(--ghost-accent);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 头部背景动画效果 */
+.ghost-log-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--ghost-glass-light), transparent);
+    animation: scanEffect 3s ease-in-out infinite;
+}
+
+@keyframes scanEffect {
+    0%, 100% { left: -100%; }
+    50% { left: 100%; }
+}
+
+/* 日志标题组 */
+.log-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ghost-white);
+    position: relative;
+    z-index: 1;
+}
+
+.log-icon {
+    font-size: 16px;
+    animation: ghostPulse 2s ease-in-out infinite;
 }
 
 .ghost-log-title {
-    color: #ccc;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.5px;
 }
 
+/* 清空按钮 */
 .ghost-log-clear {
-    background: var(--ghost-gray-light);
-    border: none;
-    color: #ccc;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 10px;
+    background: var(--ghost-glass-medium);
+    border: 1px solid var(--ghost-accent);
+    color: var(--ghost-text-primary);
+    padding: 6px 12px;
+    border-radius: var(--ghost-border-radius-small);
+    font-size: 11px;
+    font-weight: 500;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
     transition: all var(--ghost-transition-fast);
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
 }
 
 .ghost-log-clear:hover {
-    background: var(--ghost-gray-medium);
+    background: var(--ghost-glass-dark);
+    color: var(--ghost-white);
+    border-color: var(--ghost-white);
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px var(--ghost-overlay-medium);
+}
+
+.ghost-log-clear:active {
+    transform: scale(0.98);
+    transition: all var(--ghost-transition-ultra-fast);
+}
+
+/* ===== 📋 日志内容区域 ===== */
+.ghost-log-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 20px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ghost-text-secondary);
+    background: var(--ghost-overlay-light);
+    position: relative;
+    -webkit-overflow-scrolling: touch;  
+    overscroll-behavior: contain;      
+    touch-action: pan-y;  
+}
+
+/* 日志内容滚动条美化 */
+.ghost-log-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ghost-log-content::-webkit-scrollbar-track {
+    background: var(--ghost-overlay-light);
+    border-radius: 4px;
+}
+
+.ghost-log-content::-webkit-scrollbar-thumb {
+    background: var(--ghost-accent);
+    border-radius: 4px;
+    border: 1px solid var(--ghost-primary);
+    transition: all var(--ghost-transition-fast);
+}
+
+.ghost-log-content::-webkit-scrollbar-thumb:hover {
+    background: var(--ghost-secondary);
+    box-shadow: 0 0 4px var(--ghost-glow);
+}
+
+/* ===== 📋 日志条目样式 ===== */
+
+/* 占位符样式 */
+.log-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 20px;
+    color: var(--ghost-text-secondary);
+    opacity: 0.7;
+    text-align: center;
+}
+
+.placeholder-icon {
+    font-size: 24px;
+    opacity: 0.5;
+    animation: ghostRotate 8s linear infinite;
+}
+
+.placeholder-text {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--ghost-text-secondary);
+}
+
+/* 基础日志条目 */
+.log-entry {
+    padding: 8px 0 8px 12px;
+    border-bottom: 1px solid var(--ghost-glass-light);
+    border-left: 3px solid var(--ghost-accent);
+    margin-bottom: 6px;
+    word-break: break-word;
+    border-radius: 0 var(--ghost-border-radius-small) var(--ghost-border-radius-small) 0;
+    background: var(--ghost-glass-light);
+    transition: all var(--ghost-transition-fast);
+    position: relative;
+    overflow: hidden;
+}
+
+.log-entry:hover {
+    background: var(--ghost-glass-medium);
+    border-left-color: var(--ghost-secondary);
+    box-shadow: 0 2px 8px var(--ghost-overlay-light);
+    transform: translateX(2px);
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+/* 日志条目头部信息 */
+.log-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 11px;
+}
+
+.log-timestamp {
+    color: var(--ghost-text-secondary);
+    opacity: 0.8;
+    font-family: 'Courier New', monospace;
+}
+
+.log-level {
+    font-weight: 600;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* 日志内容 */
+.log-message {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--ghost-text-primary);
+    margin-bottom: 4px;
+}
+
+.log-details {
+    color: var(--ghost-text-secondary);
+    margin: 6px 0 0 0;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    background: var(--ghost-overlay-light);
+    padding: 8px;
+    border-radius: var(--ghost-border-radius-small);
+    border: 1px solid var(--ghost-glass-light);
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* ===== 📋 不同级别的日志样式 ===== */
+
+/* DEBUG 级别 */
+.log-entry.log-debug {
+    border-left-color: var(--ghost-accent);
+}
+
+.log-entry.log-debug .log-level {
+    background: var(--ghost-accent);
     color: var(--ghost-white);
 }
 
-#the_ghost_face_control_panel_log_content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px 20px;
-    font-size: 12px;
-    line-height: 1.4;
-    color: #ddd;
+.log-entry.log-debug:hover {
+    border-left-color: var(--ghost-secondary);
 }
 
-/* 日志条目 */
-.log-entry {
-    padding: 6px 0 6px 8px;
-    border-bottom: 1px solid var(--ghost-gray-light);
-    border-left: 3px solid var(--ghost-accent);
-    margin-bottom: 3px;
-    word-break: break-word;
+/* INFO 级别 */
+.log-entry.log-info {
+    border-left-color: #2196f3;
 }
 
-.log-entry div {
-    font-size: 13px;
+.log-entry.log-info .log-level {
+    background: #2196f3;
+    color: var(--ghost-white);
 }
 
-.log-entry.log-error {
-    border-left-color: var(--ghost-error);
+.log-entry.log-info:hover {
+    border-left-color: #1976d2;
 }
 
+/* WARN 级别 */
 .log-entry.log-warning {
     border-left-color: var(--ghost-warning);
 }
 
+.log-entry.log-warning .log-level {
+    background: var(--ghost-warning);
+    color: var(--ghost-white);
+}
+
+.log-entry.log-warning:hover {
+    border-left-color: var(--ghost-warning-light);
+}
+
+/* ERROR 级别 */
+.log-entry.log-error {
+    border-left-color: var(--ghost-error);
+    background: rgba(244, 67, 54, 0.05);
+}
+
+.log-entry.log-error .log-level {
+    background: var(--ghost-error);
+    color: var(--ghost-white);
+}
+
+.log-entry.log-error:hover {
+    border-left-color: var(--ghost-error-light);
+    background: rgba(244, 67, 54, 0.1);
+}
+
+/* SUCCESS 级别 */
 .log-entry.log-success {
     border-left-color: var(--ghost-success);
+    background: rgba(76, 175, 80, 0.05);
 }
 
-/* ===== 自定义滚动条 ===== */
-#the_ghost_face_control_panel_log_content::-webkit-scrollbar,
-.ghost-panel-body::-webkit-scrollbar {
-    width: 6px;
+.log-entry.log-success .log-level {
+    background: var(--ghost-success);
+    color: var(--ghost-white);
 }
 
-#the_ghost_face_control_panel_log_content::-webkit-scrollbar-track,
-.ghost-panel-body::-webkit-scrollbar-track {
-    background: var(--ghost-gray-dark);
-    border-radius: 3px;
+.log-entry.log-success:hover {
+    border-left-color: var(--ghost-success-light);
+    background: rgba(76, 175, 80, 0.1);
 }
 
-#the_ghost_face_control_panel_log_content::-webkit-scrollbar-thumb,
-.ghost-panel-body::-webkit-scrollbar-thumb {
-    background: var(--ghost-gray-medium);
-    border-radius: 3px;
-    transition: all var(--ghost-transition-fast);
+/* ===== 📋 响应式适配 ===== */
+
+/* 手机端优化 */
+@media (max-width: 480px) {
+    .ghost-log-header {
+        padding: 10px 15px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .log-title-group {
+        font-size: 12px;
+    }
+    
+    .ghost-log-clear {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+    
+    .ghost-log-content {
+        padding: 12px 15px;
+        font-size: 11px;
+    }
+    
+    .log-entry {
+        padding: 6px 0 6px 8px;
+        margin-bottom: 4px;
+    }
+    
+    .log-message {
+        font-size: 12px;
+    }
+    
+    .log-details {
+        font-size: 10px;
+        padding: 6px;
+        max-height: 80px;
+    }
+    
+    /* 小屏幕时简化时间戳显示 */
+    .log-timestamp {
+        font-size: 12px;
+    }
+    
+    .log-level {
+        font-size: 12px;
+        padding: 1px 4px;
+    }
 }
 
-#the_ghost_face_control_panel_log_content::-webkit-scrollbar-thumb:hover,
-.ghost-panel-body::-webkit-scrollbar-thumb:hover {
-    background: var(--ghost-gray-light);
+/* 平板端优化 */
+@media (min-width: 481px) and (max-width: 768px) {
+    .ghost-log-header {
+        padding: 11px 18px;
+    }
+    
+    .ghost-log-content {
+        padding: 14px 18px;
+    }
+    
+    .log-entry {
+        padding: 7px 0 7px 10px;
+        margin-bottom: 5px;
+    }
+}
+
+/* ===== 📋 特殊动画效果 ===== */
+
+/* 新日志条目出现动画 */
+@keyframes logEntryAppear {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+        max-height: 200px;
+    }
+}
+
+.log-entry.new-entry {
+    animation: logEntryAppear 0.4s ease-out;
+}
+
+/* 日志清空动画 */
+@keyframes logClearEffect {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.3;
+        transform: scale(0.98);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+.ghost-log-content.clearing .log-entry {
+    animation: logClearEffect 0.3s ease-out forwards;
+}
+
+/* 滚动到底部指示器 */
+.ghost-log-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--ghost-accent), transparent);
+    opacity: 0;
+    transition: opacity var(--ghost-transition-fast);
+}
+
+.ghost-log-content.has-new-content::after {
+    opacity: 1;
+    animation: scanEffect 2s ease-in-out;
 }
 
 /* ===== 响应式设计 ===== */
-/* 大屏幕 */
-@media (min-width: 1400px) {
+/* ===== 基础容器自适应 ===== */
+#the_ghost_face_control_panel_content {
+    width: min(420px, calc(100vw - 40px));
+    max-width: 420px;
+    min-width: 300px;
+
+    /* 🎯 智能高度适配 */
+    height: min(85vh, calc(100vh - 100px));
+    max-height: calc(80vh - 40px);
+    min-height: 400px;
+
+    /* 🎯 智能定位：始终居中且不超出屏幕 /
+    position: fixed;
+    top: max(20px, calc(50vh - 42.5vh)); / 动态顶部距离 */
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+
+    /* 其他样式保持不变 */
+    background: var(--ghost-black-overlay);
+    border: 1px solid var(--ghost-primary);
+    border-radius: var(--ghost-border-radius);
+    box-shadow: 
+        0 8px 32px var(--ghost-black-deep),
+        0 0 20px var(--ghost-glow);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--ghost-transition-slow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 10000;
+}
+
+/* ===== 超大屏幕 (1600px+) ===== /
+/ 🖥️ 超大屏幕专用优化 */
+@media (min-width: 1600px) {
+    #the_ghost_face_control_panel_content {
+        width: min(600px, 25vw) !important;
+        max-width: 600px !important;
+        min-height: 700px !important;
+        top: max(30px, calc(50vh - 650px)) !important;
+    }
+
+    .ghost-panel-body {
+        padding: 30px !important;
+    }
+
+    /* 按钮也放大一点 */
+    .ghost-button {
+        padding: 18px 16px !important;
+        font-size: 15px !important;
+        min-height: 52px !important;
+    }
+
+    /* 输入框也大一些 */
+    .ghost-input, .ghost-select {
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+    }
+
+    /* 日志区域字体大一点 */
+    #the_ghost_face_control_panel_log_content {
+        font-size: 14px !important;
+    }
+}
+
+/* ===== 大屏幕 (1200px - 1599px) ===== */
+@media (min-width: 1200px) and (max-width: 1599px) {
     #the_ghost_face_control_panel_content {
         width: min(450px, 25vw);
-        min-height: 600px;
-    }
-}
-
-/* 中等屏幕 */
-@media (min-width: 1024px) and (max-width: 1399px) {
-    #the_ghost_face_control_panel_content {
-        width: min(420px, 30vw);
+        max-width: 450px;
         min-height: 550px;
     }
-}
-
-/* 平板和中等屏幕 */
-@media (max-width: 768px) {
-    #the_ghost_face_control_panel {
-        left: 50%;
-        transform: translateX(-50%);
-    }
     
-    #the_ghost_face_control_panel_content {
-        left: 50% !important;
-        transform: translateX(-50%) scale(0.95) !important;
-        width: calc(100vw - 30px) !important;
-        max-width: 380px !important;
-        top: 70px !important;
-        max-height: calc(100vh - 90px) !important;
-        min-height: 450px !important;
-    }
-    
-    #the_ghost_face_control_panel_content.ghost-panel-show {
-        transform: translateX(-50%) scale(1) !important;
+    .ghost-panel-body {
+        padding: 22px;
     }
     
     .ghost-button {
-        touch-action: manipulation;
-        -webkit-tap-highlight-color: transparent;
-    }
-    
-    .ghost-panel-body {
-        padding: 15px !important;
-    }
-    
-    .ghost-status-card {
-        padding: 12px !important;
-        margin-bottom: 15px !important;
-    }
-    
-    .ghost-status-info {
-        font-size: 12px !important;
-        line-height: 1.4 !important;
-    }
-    
-    /* 手机端日志区域调整 */
-    .ghost-log-section {
-        min-height: 180px !important;
-    }
-    
-    .ghost-panel-body:has(#the_ghost_face_control_panel_settings_area[style*="display: none"]) .ghost-log-section {
-        flex: 3 !important;
-        min-height: 250px !important;
-    }
-    
-    .ghost-log-section.expanded {
-        flex: 3 !important;
-        min-height: 250px !important;
+        padding: 16px 14px;
+        font-size: 13px;
+        min-height: 50px;
     }
 }
 
-/* 小屏幕手机 */
-@media (max-width: 480px) {
-    #the_ghost_face_control_panel {
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
+/* ===== 中等屏幕 (768px - 1199px) ===== */
+@media (min-width: 768px) and (max-width: 1199px) {
     #the_ghost_face_control_panel_content {
-        left: 50% !important;
-        transform: translateX(-50%) scale(0.95) !important;
-        width: calc(100vw - 20px) !important;
-        max-width: none !important;
-        top: 60px !important;
-        max-height: calc(100vh - 80px) !important;
-        min-height: 400px !important;
-    }
-    
-    #the_ghost_face_control_panel_content.ghost-panel-show {
-        transform: translateX(-50%) scale(1) !important;
+        width: min(400px, calc(100vw - 50px));
+        max-width: 400px;
+        min-height: 500px;
+        top: max(30px, calc(50vh - 40vh));
     }
     
     .ghost-panel-body {
-        padding: 12px !important;
+        padding: 20px;
     }
     
-    .ghost-form-group {
-        margin-bottom: 15px !important;
+    /* 中屏幕：适中的按钮尺寸 */
+    .ghost-button {
+        padding: 15px 12px;
+        font-size: 13px;
+        min-height: 48px;
     }
     
+    /* 状态卡片紧凑化 */
     .ghost-status-card {
-        padding: 10px !important;
+        padding: 10px;
+        margin-bottom: 16px;
+    }
+    
+    .ghost-status-info {
+        font-size: 12px;
+    }
+}
+
+/* ===== 平板设备 (481px - 767px) ===== */
+@media (min-width: 481px) and (max-width: 767px) {
+    #the_ghost_face_control_panel_content {
+        width: calc(100vw - 30px);
+        max-width: 380px;
+        min-width: 320px;
+        height: calc(100vh - 60px);
+        max-height: calc(100vh - 60px);
+        min-height: 450px;
+        top: 30px;
+        left: 50%;
+        transform: translateX(-50%) scale(0.98);
+    }
+    
+    #the_ghost_face_control_panel_content.ghost-panel-show {
+        visibility: visible !important;
+        transform: translateX(-50%) scale(1);
+    }
+    
+    .ghost-panel-body {
+        padding: 18px;
+    }
+    
+    /* 🎯 平板优化：按钮网格调整 */
+    .ghost-panel-body > div:first-child {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+        margin-bottom: 18px !important;
+    }
+    
+    .ghost-button {
+        padding: 12px 10px;
+        font-size: 12px;
+        min-height: 44px;
+        /* 增加触摸友好性 */
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+    
+    /* 表单元素优化 */
+    .ghost-input, .ghost-select {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+    
+    /* 🎯 设置区域在平板上更紧凑 */
+    #the_ghost_face_control_panel_settings_area > div {
         margin-bottom: 12px !important;
     }
     
-    /* 小屏幕日志区域优化 */
+    /* 日志区域高度调整 */
+    .ghost-log-section {
+        min-height: 180px !important;
+    }
+}
+
+/* ===== 手机设备 (321px - 480px) ===== */
+@media (min-width: 321px) and (max-width: 480px) {
+   #the_ghost_face_control_panel_content {
+        width: calc(100vw - 20px);
+        height: calc(100vh - 40px);
+        top: 20px;
+    }
+    
+    #the_ghost_face_control_panel_content.ghost-panel-show {
+        transform: translateX(-50%) scale(1);
+    }
+    
+    .ghost-panel-body {
+        padding: 15px;
+    }
+    
+    /* 🎯 手机优化：按钮变成2x2网格，但间距更小 */
+    .ghost-panel-body > div:first-child {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .ghost-button {
+        padding: 10px 8px;
+        font-size: 12px;
+        min-height: 40px;
+        border-radius: 6px;
+    }
+    
+    /* 🎯 手机端：表单优化为单列 */
+    #the_ghost_face_control_panel_settings_area .grid-2-col,
+    #the_ghost_face_control_panel_settings_area div[style*="grid-template-columns"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    
+    .ghost-input, .ghost-select {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+    
+    /* 🎯 手机端：指定范围总结布局调整 */
+    div[style*="grid-template-columns: 1fr auto 1fr auto"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        grid-template-rows: auto auto auto !important;
+        gap: 8px !important;
+        align-items: stretch !important;
+    }
+    
+    div[style*="grid-template-columns: 1fr auto 1fr auto"] > span {
+        display: none !important; /* 隐藏箭头 */
+    }
+    
+    div[style*="grid-template-columns: 1fr auto 1fr auto"] > button {
+        grid-column: 1 / -1 !important; /* 按钮占满宽度 */
+        margin-top: 8px !important;
+    }
+    
+    /* 状态信息字体调整 */
+    .ghost-status-info {
+        font-size: 12px;
+        line-height: 1.3;
+    }
+    
+    /* 日志区域优化 */
     .ghost-log-section {
         min-height: 150px !important;
     }
     
-    .ghost-panel-body:has(#the_ghost_face_control_panel_settings_area[style*="display: none"]) .ghost-log-section {
-        flex: 4 !important;
-        min-height: 220px !important;
+    .ghost-log-header {
+        padding: 8px 15px;
     }
     
-    .ghost-log-section.expanded {
-        flex: 4 !important;
-        min-height: 220px !important;
+    .ghost-log-title {
+        font-size: 12px;
+    }
+    
+    #the_ghost_face_control_panel_log_content {
+        padding: 8px 15px;
+        font-size: 12px;
     }
 }
 
-/* 超小屏幕 */
-@media (max-width: 360px) {
+/* ===== 小屏手机 (≤320px) ===== */
+@media (max-width: 320px) {
     #the_ghost_face_control_panel_content {
-        width: calc(100vw - 15px) !important;
-        top: 55px !important;
-        min-height: 350px !important;
+        width: calc(100vw - 15px);
+        height: calc(100vh - 30px);
+        top: 15px;
+        min-height: 350px;
+        border-radius: 6px;
     }
     
     .ghost-panel-body {
-        padding: 10px !important;
+        padding: 12px;
     }
     
+    /* 🎯 超小屏：按钮进一步压缩 */
+    .ghost-button {
+        padding: 8px 6px;
+        font-size: 12px;
+        min-height: 36px;
+    }
+    
+    /* 🎯 超小屏：设置区域标签字体更小 */
+    #the_ghost_face_control_panel_settings_area label {
+        font-size: 12px !important;
+    }
+    
+    .ghost-input, .ghost-select {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+    
+    /* 日志区域最小化 */
     .ghost-log-section {
         min-height: 120px !important;
     }
     
-    .ghost-panel-body:has(#the_ghost_face_control_panel_settings_area[style*="display: none"]) .ghost-log-section {
-        flex: 5 !important;
-        min-height: 180px !important;
-    }
-    
-    .ghost-log-section.expanded {
-        flex: 5 !important;
-        min-height: 180px !important;
+    .ghost-status-info {
+        font-size: 12px;
     }
 }
 
-/* ===== 辅助功能 ===== */
-/* 减少动画选项支持 */
-@media (prefers-reduced-motion: reduce) {
+
+/* 减少动画以提升低端设备性能 */
+@media (max-width: 480px) {
     * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
     }
+    
+    /* 简化阴影以提升性能 */
+    #the_ghost_face_control_panel_content {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+    }
+    
+    .ghost-button {
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+    }
+    
+    .ghost-button:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    }
+}
+
+/* 🌸💖 猪猪来咯！*/
+[data-ghost-theme="thepig"] {
+    /* 🌸 主色调：樱花粉 */
+    --ghost-primary: #FFB6C1;
+    --ghost-secondary: #FF91A4;
+    --ghost-background: linear-gradient(135deg, #FFE4E6, #FFD0DC, #FFC0CB);
+    --ghost-accent: #E6A8D0;
+    --ghost-text-primary: #8B4B6B;
+    --ghost-text-secondary: #B86B8A;
+    --ghost-shadow: rgba(255, 182, 193, 0.6);
+    --ghost-glow: rgba(255, 145, 164, 0.4);
+    --ghost-glass-dark: rgba(139, 75, 107, 0.15);
+    --ghost-glass-medium: rgba(139, 75, 107, 0.1);
+    --ghost-glass-light: rgba(139, 75, 107, 0.05);
+}
+
+[data-ghost-theme="thepig"] .ghost-auto-toggle[data-auto-enabled="true"] {
+    background: linear-gradient(135deg, #FF91A4, #FFB6C1) !important;
+    animation: gentleHeartBeat 2s ease-in-out infinite;
+}
+
+@keyframes gentleHeartBeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+[data-ghost-theme="thepig"] .ghost-button:hover {
+    box-shadow: 
+        0 0 15px rgba(255, 182, 193, 0.6),
+        0 0 25px rgba(255, 145, 164, 0.4),
+        0 2px 8px var(--ghost-overlay-light) !important;
+    filter: brightness(1.1);
+}
+
+[data-ghost-theme="thepig"] .ghost-auto-toggle[data-auto-enabled="false"] {
+    background: linear-gradient(135deg, #E6A8D0, #FFB6C1) !important;
+    opacity: 0.8;
+}
+
+[data-ghost-theme="thepig"] .ghost-settings-button {
+    background: linear-gradient(135deg, #E6A8D0, #FF91A4) !important;
+}
+
+[data-ghost-theme="thepig"] .ghost-settings-button.active {
+    background: linear-gradient(135deg, #FF91A4, #FFB6C1) !important;
+    animation: gentleHeartBeat 2s ease-in-out infinite;
+}
+
+[data-ghost-theme="thepig"] #the_ghost_face_control_panel_content {
+    border: 2px solid var(--ghost-accent);
+    box-shadow: 
+        0 0 20px rgba(255, 182, 193, 0.3),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+[data-ghost-theme="thepig"] .ghost-log-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(45deg, var(--ghost-accent), var(--ghost-secondary));
+    border-radius: 10px;
+}
+
+[data-ghost-theme="thepig"] .ghost-log-content::-webkit-scrollbar-track {
+    background: rgba(255, 182, 193, 0.1);
+    border-radius: 10px;
+}
+
+/* 💖 简单的文字装饰 - 用text-shadow代替伪元素 */
+[data-ghost-theme="thepig"] .ghost-status-info {
+    text-shadow: 0 0 10px rgba(230, 168, 208, 0.3);
+    border: 1px solid rgba(255, 182, 193, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 228, 230, 0.1);
+}
+
+/* ===== ⚔️ 门徒伏击系统样式 ===== */
+/* 门徒按钮激活状态 - 跟随主题色 */
+.ghost-disciples-button.active {
+    background: linear-gradient(135deg, var(--ghost-success), var(--ghost-success-light)) !important;
+    animation: successGlow 2s ease-in-out infinite;
+}
+
+/* 🔧 猪头面板 - 限制在鬼面控制台内部 */
+#pig_panel_container {
+    transition: all var(--ghost-transition-medium);
+    overflow: hidden;
+    position: relative; /* 改为相对定位，不脱离文档流 */
+    z-index: 1; /* 低层级，只在设置区域内有效 */
+}
+
+#pig_panel_container[style*="display: none"] {
+    max-height: 0;
+    opacity: 0;
+}
+
+#pig_panel_container[style*="display: block"] {
+    max-height: 500px;
+    opacity: 1;
+}
+
+/* 🔧 猪头面板内部元素正常样式 */
+#pig_panel_container .pig-simple-panel {
+    position: relative;
+    background: var(--ghost-glass-light);
+    border: 1px solid var(--ghost-primary);
+}
+
+/* 📱 门徒面板移动端适配优化 (添加到 ghostpanel.css 文件末尾) */
+@media (max-width: 768px) {
+    /* * 首先，确保主面板容器在垂直方向上可以滚动
+     * 这就像告诉套间：如果家具太多放不下，整个房间可以上下滚动。
+     */
+    #the_ghost_face_control_panel_content {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch; /* 为iOS设备提供流畅的滚动体验 */
+    }
+
+    /* * 然后，专门为门徒面板设置规则
+     * 告诉“书房”（门徒面板）如何适应小空间。
+     */
+    #pig_panel_container {
+        flex-shrink: 0; /* 防止面板在空间不足时被自动压缩，保持其完整性 */
+        height: auto;   /* 让面板的高度由其内部内容决定，而不是被父级限制死 */
+        max-height: 60vh; /* 设置一个最大高度（比如屏幕高度的60%），防止内容过多时无限拉长 */
+        overflow-y: auto; /* 当内容超出最大高度时，允许面板内部自己滚动 */
+    }
+}
+
+
+@keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.02); opacity: 1; }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-3px); }
+    60% { transform: translateY(-2px); }
 }

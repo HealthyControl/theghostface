@@ -4,13 +4,13 @@
     "requires": [],
     "optional": [],
     "js": "index.js",
+    "css": "ghostpanel.css",
     "author": "robot",
-    "version": "2.1.0",
+    "version": "3.0.0",
     "homePage": "https://github.com/HealthyControl",
     "generate_interceptor": "memory_lorebook",
     "assets": [
-        "ghostpanel.html",
-        "ghostpanel.css"
+        "ghostpanel.html"
     ],
     "description": "鬼面弱智对话总结工具"
 }
